@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LiveHelper</title>
+    
+   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjhBy2T_kEXacyGP9ufQ4DwDnb8ItbN4c&libraries=places"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .screen { display: none; }
+        .active-screen { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hero-section { background: linear-gradient(135deg, #0d6efd, #0dcaf0); color: white; border-radius: 0 0 20px 20px; padding: 40px 20px; text-align: center; margin-bottom: 20px; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #dee2e6; z-index: 1000; }
+        .nav-link { color: #6c757d; font-size: 0.8rem; cursor: pointer; }
+        .nav-link.active { color: #0d6efd; }
+        .nav-link i { font-size: 1.5rem; display: block; margin-bottom: 2px; }
+        main { padding-bottom: 80px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-light bg-white shadow-sm sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold text-primary" href="#"><i class="fa-solid fa-hands-helping"></i> LiveHelper</a>
+        <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="goToLogin()" id="authBtn">
+            Log In <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+    </div>
+</nav>
+
+<main class="container-fluid p-0">
+
+    <section id="screen-home" class="screen active-screen">
+        <div class="hero-section shadow">
+            <h1 class="display-6 fw-bold">Welcome!</h1>
+            <p class="lead mb-0">How can we help you travel today?</p>
+        </div>
+        
+        <div class="container px-4">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('passenger')">
+                        <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fa-solid fa-wheelchair text-primary fa-3x mb-3"></i>
+                            <h5 class="card-title text-primary fw-bold">I Need Help</h5>
+                            <p class="card-text small text-muted">Find a volunteer</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('volunteer')">
+                        <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fa-solid fa-hand-holding-heart text-success fa-3x mb-3"></i>
+                            <h5 class="card-title text-success fw-bold">Volunteer</h5>
+                            <p class="card-text small text-muted">Offer assistance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-login" class="screen">
+        <div class="container mt-5 px-4">
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-user-circle fa-4x text-primary mb-3"></i>
+                <h2 class="fw-bold">Sign In</h2>
+                <p class="text-muted">Access your account to continue</p>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <ul class="nav nav-pills nav-fill mb-4">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tab-passenger" onclick="switchLoginTab('passenger')">Passenger</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tab-volunteer" onclick="switchLoginTab('volunteer')">Volunteer</button>
+                        </li>
+                    </ul>
+
+                    <form id="authForm">
+                        <input type="hidden" id="userRole" value="passenger">
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+                            <label for="email">Email address</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control" id="password" placeholder="Password" required>
+                            <label for="password">Password</label>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Log In</button>
+                            <button type="button" class="btn btn-light" onclick="showScreen('screen-home')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-passenger" class="screen">
+        <div class="bg-primary text-white p-4 rounded-bottom shadow-sm mb-3">
+            <h2 class="fw-bold mb-0">Request Help</h2>
+            <p class="small opacity-75 mb-0">Let's get you moving.</p>
+        </div>
+
+        <div class="container px-4">
+            <div class="card border-0 shadow-sm p-3">
+                <form id="requestForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">CURRENT LOCATION</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-location-dot text-danger"></i></span>
+                            <input type="text" class="form-control border-start-0 bg-light" id="locationDisplay" value="Tap button to locate..." readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="getGPS()"><i class="fa-solid fa-crosshairs"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">DESTINATION</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-map-pin text-primary"></i></span>
+                            <input type="text" class="form-control border-start-0" id="destination" placeholder="e.g. King's Cross Station" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">TYPE OF ASSISTANCE</label>
+                        <select class="form-select" id="helpType">
+                            <option value="Visual Guidance">Visual Guidance (Blind/Low Vision)</option>
+                            <option value="Wheelchair Support">Wheelchair Support</option>
+                            <option value="Autism Support">Autism/Anxiety Support</option>
+                            <option value="Heavy Lifting">Help with Luggage</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                            Find Volunteer <i class="fa-solid fa-magnifying-glass ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="google-map" style="width: 100%; height: 400px; background-color: #eee; border-radius: 10px; margin-top: 15px; display: none;"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-volunteer" class="screen">
+        <div class="bg-success text-white p-4 rounded-bottom shadow-sm mb-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold mb-0">Volunteer Feed</h2>
+                <p class="small opacity-75 mb-0">Nearby requests</p>
+            </div>
+            <span class="badge bg-white text-success rounded-pill px-3 py-2"><i class="fa-solid fa-circle small me-1"></i> Online</span>
+        </div>
+
+        <div class="container px-4" id="requests-feed">
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border text-success mb-3" role="status"></div>
+                <p>Scanning for requests...</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<nav class="bottom-nav">
+    <div class="container d-flex justify-content-around py-2">
+        <a class="nav-link active text-center" onclick="showScreen('screen-home')">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a class="nav-link text-center" onclick="checkLogin('passenger')">
+            <i class="fa-solid fa-person-walking-with-cane"></i> Get Help
+        </a>
+        <a class="nav-link text-center" onclick="checkLogin('volunteer')">
+            <i class="fa-solid fa-hand-holding-heart"></i> Volunteer
+        </a>
+    </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/script.js"></script>
+
+</body>
+</html>

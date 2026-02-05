@@ -1,0 +1,398 @@
+/* 1. Global Reset & Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Removes blue highlight on tap */
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f2f4f8;
+    color: #1f2937;
+    height: 100vh;
+    overflow: hidden; /* Prevents full page scrolling */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 2. App Header */
+.app-header {
+    background: #ffffff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    z-index: 100;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #2563eb;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #22c55e;
+    border-radius: 50%;
+}
+
+/* 3. Main Content Area */
+#app-content {
+    flex: 1;
+    overflow-y: auto; /* Allows scrolling inside the content area */
+    padding: 20px;
+    padding-bottom: 80px; /* Space for bottom nav */
+}
+
+/* Screen Management (Hide all, show active) */
+.screen {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.active-screen {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 4. Dashboard Cards */
+.welcome-card {
+    margin-bottom: 20px;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.card-btn {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.card-btn:active {
+    transform: scale(0.95);
+}
+
+.card-btn i {
+    font-size: 2rem;
+    color: #2563eb;
+}
+
+.volunteer-theme i {
+    color: #10b981;
+}
+
+/* 5. Forms & Inputs */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+input, select {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: white;
+    outline: none;
+}
+
+input:focus {
+    border-color: #2563eb;
+}
+
+.location-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: white;
+    padding: 5px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.location-box span {
+    flex: 1;
+    padding-left: 10px;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.icon-btn {
+    background: #eff6ff;
+    color: #2563eb;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+/* 6. Buttons */
+.app-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.primary-btn { background: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+.secondary-btn { background: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+
+/* 7. Bottom Navigation Bar */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    border-top: 1px solid #e5e7eb;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)); /* iPhone X fix */
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.nav-item i {
+    font-size: 1.4rem;
+}
+
+.nav-item.active {
+    color: #2563eb;
+}
+/* GLOBAL RESET */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8fafc; /* Light grey background */
+    color: #1e293b;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER STYLES (Split Left/Right) */
+.app-header {
+    background: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between; /* Pushes items to edges */
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.header-left h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #2563eb; /* Blue Title */
+}
+
+.sub-text {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.header-login-btn {
+    background-color: transparent;
+    border: 1px solid #2563eb;
+    color: #2563eb;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.header-login-btn:hover {
+    background-color: #eff6ff;
+}
+
+/* HERO CARD (The Blue Box) */
+.hero-card {
+    background-color: #2563eb; /* Strong Blue */
+    color: white;
+    padding: 30px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.hero-card h2 { margin: 0 0 10px 0; font-size: 1.5rem; }
+.hero-card p { margin: 0; opacity: 0.9; }
+
+/* ACTION GRID (The Two White Buttons) */
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.big-card-btn {
+    background: white;
+    padding: 25px 15px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.1s;
+    border: 1px solid #e2e8f0;
+}
+
+.big-card-btn:active { transform: scale(0.98); }
+
+.big-card-btn i {
+    font-size: 2rem;
+    color: #2563eb;
+    margin-bottom: 15px;
+}
+
+.big-card-btn h3 { margin: 0 0 5px 0; font-size: 1rem; }
+.big-card-btn p { margin: 0; font-size: 0.8rem; color: #64748b; }
+
+/* STANDARD UTILITIES */
+.screen { display: none; padding: 20px; flex: 1; overflow-y: auto; }
+.active-screen { display: block; animation: fadeUp 0.3s ease; }
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* LOGIN FORM STYLES */
+.login-container { max-width: 400px; margin: 20px auto; background: white; padding: 30px; border-radius: 16px; }
+.input-group { position: relative; margin-bottom: 15px; }
+.input-group i { position: absolute; left: 15px; top: 14px; color: #94a3b8; }
+.input-group input { width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+.app-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.primary-btn { background: #2563eb; color: white; }
+.text-btn { background: none; color: #64748b; width: 100%; margin-top: 10px; cursor: pointer; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+    background: white; border-top: 1px solid #e2e8f0;
+    display: flex; justify-content: space-around; padding: 12px 0;
+}
+.nav-item { text-align: center; color: #94a3b8; font-size: 0.75rem; cursor: pointer; }
+.nav-item i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+.nav-item.active { color: #2563eb; }
+
+/* ... Keep your existing global styles ... */
+
+/* LOGIN TABS */
+.login-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    padding: 4px;
+}
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #64748b;
+}
+.tab.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* DASHBOARD FORMS */
+.welcome-card {
+    background: #2563eb;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+.volunteer-theme { background: #10b981; } /* Green for volunteers */
+
+.location-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    padding: 5px;
+    border-radius: 8px;
+    background: white;
+}
+.location-box span { flex: 1; padding-left: 10px; color: #64748b; font-size: 0.9rem; }
+.icon-btn {
+    background: #eff6ff; color: #2563eb;
+    border: none; padding: 10px; border-radius: 6px; cursor: pointer;
+}
+
+/* VOLUNTEER FEED CARDS */
+.request-card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border-left: 5px solid #f59e0b; /* Orange strip */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.req-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.req-name { font-weight: bold; }
+.req-dist { color: #2563eb; font-size: 0.85rem; }
+.req-detail { color: #64748b; font-size: 0.9rem; margin-bottom: 10px; }
+.tag {
+    display: inline-block; background: #eff6ff; color: #2563eb;
+    padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+}
+.accept-btn {
+    width: 100%; background: #10b981; color: white; border: none;
+    padding: 10px; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold;
+}
