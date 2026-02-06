@@ -109,6 +109,7 @@
             <h2 class="fw-bold mb-0">Request Help</h2>
             <p class="small opacity-75 mb-0">Let's get you moving.</p>
         </div>
+            
 
         <div class="container px-4">
             <div class="card border-0 shadow-sm p-3">
@@ -146,10 +147,37 @@
                         </button>
                     </div>
                 </form>
-                
-                <div id="google-map" style="width: 100%; height: 400px; background-color: #eee; border-radius: 10px; margin-top: 15px; display: none;"></div>
-            </div>
+                <div id="connecting-overlay" class="connecting-card">
+                     <div class="connecting-header">
+                         <h3>Connecting you to a volunteer</h3>
+                         <p>Confirming volunteer details...</p>
+                    </div>
+    
+                 <div class="progress-container">
+                     <div class="progress-bar"></div>
+                </div>
+
+                <div class="request-preview">
+                     <div class="preview-icon">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+         <div class="preview-text">
+            <strong>Meet at your location</strong>
+            <span id="preview-dest">Processing location...</span>
         </div>
+        <button class="cancel-btn" onclick="cancelRequest()">Cancel</button>
+    </div>
+</div>
+                
+                <div id="map-wrapper" style="margin-top: 15px;">
+    <div id="google-map" style="width: 100%; height: 350px; border-radius: 10px; margin-bottom: 10px; display: none;"></div>
+    
+    <div id="directions-panel" style="width: 100%; max-height: 400px; overflow-y: auto; background: white; padding: 10px; border-radius: 10px; border: 1px solid #dee2e6; display: none;"></div>
+</div>
+
+
+
+        
     </section>
 
     <section id="screen-volunteer" class="screen">

@@ -143,8 +143,27 @@ if(reqForm) {
         const type = document.getElementById('helpType').value;
         const email = document.getElementById('email').value || "Guest";
         
-        try {
-            // Save to AWS
+      try {
+            // 1. Hide the Form (so we see the map clearly)
+            document.getElementById('requestForm').style.display = 'none';
+            
+            // 2. Show the Google Map full screen (optional tweak)
+            const mapContainer = document.getElementById('google-map');
+            mapContainer.style.display = 'block';
+            mapContainer.style.height = '60vh'; // Make map taller
+
+            // 3. Show the "Connecting..." Card
+            const overlay = document.getElementById('connecting-overlay');
+            const previewDest = document.getElementById('preview-dest');
+            if(overlay) {
+                overlay.style.display = 'block';
+                if(previewDest) previewDest.innerText = dest; // Show actual destination
+            }
+
+            // 4. Initialize Map Immediately
+            initGoogleMap(userCoords.lat, userCoords.lng, dest);
+
+            // 5. Save to AWS in the background
             const res = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -161,13 +180,12 @@ if(reqForm) {
             if(data.success) console.log("Request saved to cloud");
 
         } catch (err) {
-            console.error("AWS Error (Ignored for Map):", err);
+            console.error("AWS Error:", err);
+            alert("⚠️ Network Error, but showing map demo.");
         } finally {
+            // Reset button state just in case
             btn.innerText = originalText;
             btn.disabled = false;
-            
-            // Initialize Map with real coordinates
-            initGoogleMap(userCoords.lat, userCoords.lng, dest);
         }
     });
 }
@@ -205,41 +223,90 @@ async function loadVolunteerFeed() {
     }
 }
 
-// --- GOOGLE MAPS LOGIC ---
+// --- GOOGLE MAPS LOGIC (TRANSIT OPTIONS) ---
 function initGoogleMap(userLat, userLng, destinationText) {
     const mapContainer = document.getElementById('google-map');
-    mapContainer.style.display = 'block';
+    const panelContainer = document.getElementById('directions-panel'); 
 
+    // 1. Reveal the Map and Panel
+    if (mapContainer) mapContainer.style.display = 'block';
+    if (panelContainer) {
+        panelContainer.style.display = 'block';
+        panelContainer.innerHTML = ""; // Clear old directions
+    }
+
+    // 2. Initialize Map
     if (!map) {
         try {
             map = new google.maps.Map(mapContainer, {
                 zoom: 14,
-                center: { lat: userLat, lng: userLng }
+                center: { lat: userLat, lng: userLng },
+                mapTypeControl: false, 
+                fullscreenControl: false,
+                streetViewControl: false
             });
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer();
+            
+            // ✅ Link Map & Panel
             directionsRenderer.setMap(map);
+            directionsRenderer.setPanel(panelContainer); 
+
         } catch(e) {
             alert("⚠️ Map Error. Check API Key.");
             return;
         }
     }
 
+    // 3. Request Route (WITH ALTERNATIVES)
     const request = {
         origin: { lat: userLat, lng: userLng },
         destination: destinationText, 
-        travelMode: 'WALKING'
+        travelMode: 'TRANSIT', 
+        provideRouteAlternatives: true, // <--- 🚨 THIS IS THE KEY CHANGE!
+        transitOptions: {
+            modes: ['SUBWAY', 'TRAIN', 'BUS'], 
+            routingPreference: 'FEWER_TRANSFERS'
+        }
     };
 
     directionsService.route(request, function(result, status) {
         if (status == 'OK') {
             directionsRenderer.setDirections(result);
         } else {
-            // Detailed error for debugging
             console.error("Maps Error:", status);
-            alert('❌ Route Failed: Could not find a path to that destination.');
+            if (status === 'ZERO_RESULTS') {
+                alert('⚠️ No public transport route found. Switching to walking.');
+                request.travelMode = 'WALKING';
+                // Walking usually doesn't need alternatives, so we turn it off for fallback
+                request.provideRouteAlternatives = false; 
+                directionsService.route(request, (res, stat) => {
+                    if (stat === 'OK') directionsRenderer.setDirections(res);
+                });
+            } else {
+                alert('❌ Route Failed: ' + status);
+            }
         }
     });
+}
+
+// --- CANCEL & RESET ---
+function cancelRequest() {
+    // Hide overlay
+    const overlay = document.getElementById('connecting-overlay');
+    if(overlay) overlay.style.display = 'none';
+
+    // Show form again
+    const form = document.getElementById('requestForm');
+    if(form) form.style.display = 'block';
+
+    // Hide Map & Directions
+    const mapDiv = document.getElementById('google-map');
+    const panelDiv = document.getElementById('directions-panel');
+    if(mapDiv) mapDiv.style.display = 'none';
+    if(panelDiv) panelDiv.style.display = 'none';
+
+    alert("Request cancelled.");
 }
 
 // --- ✅ ENABLE GOOGLE AUTOCOMPLETE ---
