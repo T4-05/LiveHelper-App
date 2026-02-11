@@ -52,11 +52,37 @@ function switchLoginTab(role) {
     }
 }
 
+// --- TOGGLE BETWEEN LOGIN & SIGNUP ---
+function toggleAuthMode() {
+    const modeInput = document.getElementById('authMode');
+    const title = document.getElementById('auth-title');
+    const btn = document.getElementById('submitBtn');
+    const toggleText = document.getElementById('toggleText');
+    const signupFields = document.getElementById('signup-fields');
+
+    if (modeInput.value === 'login') {
+        // Switch to Sign Up
+        modeInput.value = 'signup';
+        title.innerText = "Create Account";
+        btn.innerText = "Sign Up";
+        toggleText.innerHTML = 'Already have an account? <a href="#" onclick="toggleAuthMode()">Log In</a>';
+        signupFields.style.display = 'block';
+    } else {
+        // Switch back to Login
+        modeInput.value = 'login';
+        title.innerText = "Sign In";
+        btn.innerText = "Log In";
+        toggleText.innerHTML = 'New here? <a href="#" onclick="toggleAuthMode()">Create Account</a>';
+        signupFields.style.display = 'none';
+    }
+}
+
+// --- UPDATED FORM HANDLER ---
 const authForm = document.getElementById('authForm');
 if(authForm) {
     authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
+        const btn = document.getElementById('submitBtn');
         const originalText = btn.innerHTML;
         btn.innerHTML = 'Connecting...';
         btn.disabled = true;
@@ -64,31 +90,46 @@ if(authForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const role = document.getElementById('userRole').value;
+        const mode = document.getElementById('authMode').value; // 'login' or 'signup'
+        
+        // Get extra data if signing up
+        const name = document.getElementById('fullName').value;
+        const phone = document.getElementById('phone').value;
 
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'login', email, password, role })
+                body: JSON.stringify({ 
+                    action: mode, // Sends 'signup' or 'login'
+                    email, 
+                    password, 
+                    role,
+                    name: mode === 'signup' ? name : undefined,
+                    phone: mode === 'signup' ? phone : undefined
+                })
             });
             const data = await response.json();
 
             if (data.success) {
                 isLoggedIn = true;
-                alert(`✅ Login Successful!`);
+                alert(mode === 'signup' ? "✅ Account Created! Logged in." : "✅ Welcome back!");
+                
+                // Update Login Button state
                 const loginBtn = document.getElementById('authBtn');
                 if(loginBtn) {
                     loginBtn.innerHTML = 'Log Out';
                     loginBtn.setAttribute('onclick', 'logout()');
                 }
+                
                 if (role === 'passenger') showScreen('screen-passenger');
                 else { showScreen('screen-volunteer'); loadVolunteerFeed(); }
             } else {
-                alert("❌ Login Failed: " + (data.error || "Unknown error"));
+                alert("❌ Error: " + (data.error || "Unknown error"));
             }
         } catch (error) {
             console.error(error);
-            alert("⚠️ Cloud Connection Error. Logging you in offline mode.");
+            alert("⚠️ Connection Error. Logging in offline mode for demo.");
             isLoggedIn = true;
             if (role === 'passenger') showScreen('screen-passenger');
             else showScreen('screen-volunteer');
@@ -123,12 +164,12 @@ function getGPS() {
     }
 }
 
+// --- STEP 1: SEARCH & SHOW ROUTES ---
 const reqForm = document.getElementById('requestForm');
 if(reqForm) {
     reqForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // 1. Check if we have a location
         if (!userCoords) {
             alert("⚠️ Please click the target button 🎯 to get your location first!");
             return;
@@ -140,54 +181,66 @@ if(reqForm) {
         btn.disabled = true;
         
         const dest = document.getElementById('destination').value;
-        const type = document.getElementById('helpType').value;
-        const email = document.getElementById('email').value || "Guest";
         
-      try {
-            // 1. Hide the Form (so we see the map clearly)
+        try {
+            // 1. Hide the Form
             document.getElementById('requestForm').style.display = 'none';
             
-            // 2. Show the Google Map full screen (optional tweak)
-            const mapContainer = document.getElementById('google-map');
-            mapContainer.style.display = 'block';
-            mapContainer.style.height = '60vh'; // Make map taller
+            // 2. Show the Map & Confirm Button (BUT NOT THE OVERLAY YET)
+            const mapContainer = document.getElementById('map-container'); 
+            if(mapContainer) mapContainer.style.display = 'block';
 
-            // 3. Show the "Connecting..." Card
-            const overlay = document.getElementById('connecting-overlay');
-            const previewDest = document.getElementById('preview-dest');
-            if(overlay) {
-                overlay.style.display = 'block';
-                if(previewDest) previewDest.innerText = dest; // Show actual destination
-            }
-
-            // 4. Initialize Map Immediately
+            // 3. Initialize Map & Calculate Routes
             initGoogleMap(userCoords.lat, userCoords.lng, dest);
 
-            // 5. Save to AWS in the background
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'request_help', 
-                    email: email,
-                    destination: dest,
-                    helpType: type,
-                    lat: userCoords.lat,
-                    lng: userCoords.lng
-                })
-            });
-            const data = await res.json();
-            if(data.success) console.log("Request saved to cloud");
-
         } catch (err) {
-            console.error("AWS Error:", err);
-            alert("⚠️ Network Error, but showing map demo.");
+            console.error("Error:", err);
+            alert("⚠️ Could not load map.");
+            document.getElementById('requestForm').style.display = 'block';
         } finally {
-            // Reset button state just in case
             btn.innerText = originalText;
             btn.disabled = false;
         }
     });
+}
+
+// --- STEP 2: CONFIRM & CONNECT ---
+async function confirmSelection() {
+    // 1. Show the "Connecting..." Overlay (Bottom Sheet)
+    const overlay = document.getElementById('connecting-overlay');
+    if(overlay) {
+        overlay.style.display = 'block';
+        // Scroll to top so user sees the "Connecting" header
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 2. Update Text Details
+    const dest = document.getElementById('destination').value;
+    const previewDest = document.getElementById('preview-dest');
+    if(previewDest) previewDest.innerText = dest;
+
+    // 3. Save to AWS (Database)
+    const email = document.getElementById('email').value || "Guest";
+    const type = document.getElementById('helpType').value;
+
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'request_help', 
+                email: email,
+                destination: dest,
+                helpType: type,
+                lat: userCoords.lat,
+                lng: userCoords.lng
+            })
+        });
+        const data = await res.json();
+        if(data.success) console.log("Request saved to cloud");
+    } catch(err) {
+        console.error("AWS Save Error:", err);
+    }
 }
 
 // --- VOLUNTEER FEED ---
@@ -223,19 +276,12 @@ async function loadVolunteerFeed() {
     }
 }
 
-// --- GOOGLE MAPS LOGIC (TRANSIT OPTIONS) ---
+// --- GOOGLE MAPS LOGIC (With Route Options) ---
 function initGoogleMap(userLat, userLng, destinationText) {
     const mapContainer = document.getElementById('google-map');
     const panelContainer = document.getElementById('directions-panel'); 
 
-    // 1. Reveal the Map and Panel
-    if (mapContainer) mapContainer.style.display = 'block';
-    if (panelContainer) {
-        panelContainer.style.display = 'block';
-        panelContainer.innerHTML = ""; // Clear old directions
-    }
-
-    // 2. Initialize Map
+    // 1. Initialize Map
     if (!map) {
         try {
             map = new google.maps.Map(mapContainer, {
@@ -248,7 +294,7 @@ function initGoogleMap(userLat, userLng, destinationText) {
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer();
             
-            // ✅ Link Map & Panel
+            // Link Map & Panel
             directionsRenderer.setMap(map);
             directionsRenderer.setPanel(panelContainer); 
 
@@ -258,12 +304,12 @@ function initGoogleMap(userLat, userLng, destinationText) {
         }
     }
 
-    // 3. Request Route (WITH ALTERNATIVES)
+    // 2. Request Route (WITH ALTERNATIVES)
     const request = {
         origin: { lat: userLat, lng: userLng },
         destination: destinationText, 
         travelMode: 'TRANSIT', 
-        provideRouteAlternatives: true, // <--- 🚨 THIS IS THE KEY CHANGE!
+        provideRouteAlternatives: true, // ✅ Shows multiple options
         transitOptions: {
             modes: ['SUBWAY', 'TRAIN', 'BUS'], 
             routingPreference: 'FEWER_TRANSFERS'
@@ -278,7 +324,6 @@ function initGoogleMap(userLat, userLng, destinationText) {
             if (status === 'ZERO_RESULTS') {
                 alert('⚠️ No public transport route found. Switching to walking.');
                 request.travelMode = 'WALKING';
-                // Walking usually doesn't need alternatives, so we turn it off for fallback
                 request.provideRouteAlternatives = false; 
                 directionsService.route(request, (res, stat) => {
                     if (stat === 'OK') directionsRenderer.setDirections(res);
@@ -296,21 +341,18 @@ function cancelRequest() {
     const overlay = document.getElementById('connecting-overlay');
     if(overlay) overlay.style.display = 'none';
 
+    // Hide Map Container
+    const mapContainer = document.getElementById('map-container');
+    if(mapContainer) mapContainer.style.display = 'none';
+
     // Show form again
     const form = document.getElementById('requestForm');
     if(form) form.style.display = 'block';
 
-    // Hide Map & Directions
-    const mapDiv = document.getElementById('google-map');
-    const panelDiv = document.getElementById('directions-panel');
-    if(mapDiv) mapDiv.style.display = 'none';
-    if(panelDiv) panelDiv.style.display = 'none';
-
     alert("Request cancelled.");
 }
 
-// --- ✅ ENABLE GOOGLE AUTOCOMPLETE ---
-// This ensures the page is ready before attaching the tool
+// --- ENABLE AUTOCOMPLETE ---
 window.onload = function() {
     const destInput = document.getElementById('destination');
     if (destInput && google) {
