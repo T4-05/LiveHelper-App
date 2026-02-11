@@ -1,6 +1,9 @@
 // ✅ CONNECTED TO YOUR AWS CLOUD
 const API_URL = 'https://adspkvmkg1.execute-api.us-east-1.amazonaws.com/default/LiveHelper-Login';
+
+// GLOBAL STATE
 let isLoggedIn = false;
+let currentUserRole = null; // 🔒 NEW: Stores "passenger" or "volunteer"
 let userCoords = null; 
 let map = null;
 let directionsService = null;
@@ -13,13 +16,21 @@ function showScreen(screenId) {
     if(target) target.classList.add('active-screen');
 }
 
-function handleActionClick(role) {
+function handleActionClick(targetRole) {
     if (isLoggedIn) {
-        if (role === 'passenger') showScreen('screen-passenger');
+        // 🔒 SECURITY CHECK: Prevent switching sides
+        if (currentUserRole !== targetRole) {
+            alert(`⛔ Access Denied.\n\nYou are logged in as a ${currentUserRole.toUpperCase()}.\nPlease log out if you want to sign in as a ${targetRole}.`);
+            return;
+        }
+
+        // If roles match, allow access
+        if (targetRole === 'passenger') showScreen('screen-passenger');
         else { showScreen('screen-volunteer'); loadVolunteerFeed(); }
     } else {
+        // If not logged in, send them to login screen with the correct tab
         showScreen('screen-login');
-        switchLoginTab(role);
+        switchLoginTab(targetRole);
     }
 }
 
@@ -28,6 +39,7 @@ function goToLogin() { showScreen('screen-login'); }
 
 function logout() {
     isLoggedIn = false;
+    currentUserRole = null; // 🔒 Clear the role
     const btn = document.getElementById('authBtn');
     if(btn) {
         btn.innerHTML = 'Log In <i class="fa-solid fa-arrow-right-to-bracket"></i>';
@@ -89,7 +101,7 @@ if(authForm) {
 
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        const role = document.getElementById('userRole').value;
+        const role = document.getElementById('userRole').value; // 'passenger' or 'volunteer'
         const mode = document.getElementById('authMode').value; // 'login' or 'signup'
         
         // Get extra data if signing up
@@ -113,6 +125,8 @@ if(authForm) {
 
             if (data.success) {
                 isLoggedIn = true;
+                currentUserRole = role; // 🔒 LOCK THE SESSION TO THIS ROLE
+                
                 alert(mode === 'signup' ? "✅ Account Created! Logged in." : "✅ Welcome back!");
                 
                 // Update Login Button state
@@ -122,6 +136,7 @@ if(authForm) {
                     loginBtn.setAttribute('onclick', 'logout()');
                 }
                 
+                // Route to correct screen
                 if (role === 'passenger') showScreen('screen-passenger');
                 else { showScreen('screen-volunteer'); loadVolunteerFeed(); }
             } else {
@@ -131,6 +146,7 @@ if(authForm) {
             console.error(error);
             alert("⚠️ Connection Error. Logging in offline mode for demo.");
             isLoggedIn = true;
+            currentUserRole = role; // Lock offline mode too
             if (role === 'passenger') showScreen('screen-passenger');
             else showScreen('screen-volunteer');
         } finally {
@@ -141,6 +157,7 @@ if(authForm) {
 }
 
 // --- PASSENGER: GPS ---
+// --- PASSENGER: GPS (With Address Lookup) ---
 function getGPS() {
     const display = document.getElementById('locationDisplay');
     display.value = "Locating...";
@@ -151,7 +168,19 @@ function getGPS() {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 userCoords = { lat: lat, lng: lng };
-                display.value = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                
+                // ✅ NEW: Convert Coordinates to Address (Reverse Geocoding)
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: { lat: lat, lng: lng } }, (results, status) => {
+                    if (status === "OK" && results[0]) {
+                        // Success! Show the actual address (e.g., "123 High St, London")
+                        display.value = "📍 " + results[0].formatted_address; 
+                    } else {
+                        // Fallback: If address lookup fails, show coords
+                        console.warn("Geocoder failed: " + status);
+                        display.value = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`; 
+                    }
+                });
             },
             () => { 
                 display.value = "❌ GPS Error (Using Default)"; 
@@ -163,7 +192,6 @@ function getGPS() {
         display.value = "❌ Not Supported";
     }
 }
-
 // --- STEP 1: SEARCH & SHOW ROUTES ---
 const reqForm = document.getElementById('requestForm');
 if(reqForm) {
@@ -186,7 +214,7 @@ if(reqForm) {
             // 1. Hide the Form
             document.getElementById('requestForm').style.display = 'none';
             
-            // 2. Show the Map & Confirm Button (BUT NOT THE OVERLAY YET)
+            // 2. Show the Map & Confirm Button
             const mapContainer = document.getElementById('map-container'); 
             if(mapContainer) mapContainer.style.display = 'block';
 
@@ -258,13 +286,24 @@ async function loadVolunteerFeed() {
         const data = await res.json();
 
         if (data.success && data.requests && data.requests.length > 0) {
+            // We use (req.lat, req.lng) to pass the location to the map
             feed.innerHTML = data.requests.map(req => `
                 <div class="card mb-3 border-0 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title fw-bold">${req.passengerEmail || 'Passenger'}</h5>
-                        <p class="card-text">To: <strong>${req.destination}</strong></p>
-                        <span class="badge bg-info text-dark">${req.helpType}</span>
-                        <button class="btn btn-success w-100 mt-2" onclick="alert('Accepted!')">Accept</button>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title fw-bold text-dark mb-1">Passenger Request</h5>
+                                <p class="card-text text-muted small mb-2"><i class="fa-solid fa-map-pin text-danger"></i> ${req.destination}</p>
+                            </div>
+                            <span class="badge bg-primary">${req.helpType}</span>
+                        </div>
+                        
+                        <div class="d-grid mt-3">
+                            <button class="btn btn-success fw-bold" 
+                                onclick="acceptRequest(${req.lat}, ${req.lng}, '${req.destination.replace(/'/g, "\\'")}')">
+                                Accept & Navigate <i class="fa-solid fa-location-arrow ms-2"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -272,10 +311,76 @@ async function loadVolunteerFeed() {
             feed.innerHTML = `<p class="text-center text-muted">No active requests found.</p>`;
         }
     } catch (err) {
+        console.error(err);
         feed.innerHTML = `<p class="text-center text-danger">Could not connect to Cloud.</p>`;
     }
 }
 
+// --- VOLUNTEER: ACCEPT & NAVIGATE ---
+function acceptRequest(passengerLat, passengerLng, destName) {
+    // 1. Switch UI: Hide Feed, Show Map
+    document.getElementById('requests-feed').style.display = 'none';
+    document.getElementById('volunteer-nav').style.display = 'block';
+    
+    // Update the status text
+    const statusText = document.getElementById('nav-dest');
+    if(statusText) statusText.innerText = "Heading to: " + destName;
+
+    // 2. Get Volunteer's Current Location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const volLat = position.coords.latitude;
+            const volLng = position.coords.longitude;
+
+            // 3. Initialize the Volunteer Map
+            const mapDiv = document.getElementById('volunteer-map');
+            const volMap = new google.maps.Map(mapDiv, {
+                zoom: 15,
+                center: { lat: volLat, lng: volLng },
+                disableDefaultUI: true // Cleaner look for navigation
+            });
+
+            const dirService = new google.maps.DirectionsService();
+            const dirRenderer = new google.maps.DirectionsRenderer({
+                map: volMap,
+                suppressMarkers: false
+            });
+
+            // 4. Calculate Walking Route (Volunteer -> Passenger)
+            const request = {
+                origin: { lat: volLat, lng: volLng },     // Volunteer is here
+                destination: { lat: passengerLat, lng: passengerLng }, // Passenger is here
+                travelMode: 'WALKING'
+            };
+
+            dirService.route(request, (result, status) => {
+                if (status === 'OK') {
+                    dirRenderer.setDirections(result);
+                } else {
+                    alert("⚠️ Could not calculate route: " + status);
+                }
+            });
+
+        }, () => {
+            alert("❌ GPS Error. Could not find your location.");
+        });
+    } else {
+        alert("❌ Geolocation is not supported by this browser.");
+    }
+}
+
+// --- VOLUNTEER: COMPLETE JOB ---
+function completeJob() {
+    // Reset UI
+    document.getElementById('volunteer-nav').style.display = 'none';
+    document.getElementById('requests-feed').style.display = 'block';
+    
+    // Optional: You could send a "Complete" signal to the database here if you wanted
+    alert("✅ Job Complete! Thank you for your help.");
+    
+    // Refresh the list to see if there are new jobs
+    loadVolunteerFeed();
+}
 // --- GOOGLE MAPS LOGIC (With Route Options) ---
 function initGoogleMap(userLat, userLng, destinationText) {
     const mapContainer = document.getElementById('google-map');

@@ -220,7 +220,7 @@
                 <h2 class="fw-bold mb-0">Volunteer Feed</h2>
                 <p class="small opacity-75 mb-0">Nearby requests</p>
             </div>
-            <span class="badge bg-white text-success rounded-pill px-3 py-2"><i class="fa-solid fa-circle small me-1"></i> Online</span>
+            <button class="btn btn-sm btn-outline-light" onclick="logout()">Log Out</button>
         </div>
 
         <div class="container px-4" id="requests-feed">
@@ -228,6 +228,19 @@
                 <div class="spinner-border text-success mb-3" role="status"></div>
                 <p>Scanning for requests...</p>
             </div>
+        </div>
+
+        <div class="container px-4" id="volunteer-nav" style="display:none;">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="fw-bold text-success"><i class="fa-solid fa-location-arrow"></i> Navigating</h5>
+                    <p class="text-muted mb-2" id="nav-dest">Heading to passenger...</p>
+                    <button class="btn btn-success w-100 fw-bold" onclick="completeJob()">
+                        <i class="fa-solid fa-check"></i> Arrived / Complete Job
+                    </button>
+                </div>
+            </div>
+            <div id="volunteer-map" style="width: 100%; height: 400px; background: #e9ecef; border-radius: 12px;"></div>
         </div>
     </section>
 
