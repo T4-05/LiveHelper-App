@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { 
-            background-color: #f8f9fa; 
+            background-color: #b7c2f0; 
             overflow: hidden; /* Keep body fixed */
             display: flex;
             flex-direction: column;
@@ -25,16 +25,15 @@
         .screen { display: none; }
         .active-screen { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .hero-section { background: linear-gradient(135deg, #0d6efd, #0dcaf0); color: white; border-radius: 0 0 20px 20px; padding: 40px 20px; text-align: center; margin-bottom: 20px; }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #dee2e6; z-index: 1000; }
-        .nav-link { color: #6c757d; font-size: 0.8rem; cursor: pointer; }
+        .hero-section { background: linear-gradient(135deg, #e4079a, #0dcaf0); color: rgb(245, 234, 234); border-radius: 0 0 20px 20px; padding: 40px 20px; text-align: center; margin-bottom: 20px; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgb(228, 208, 250); border-top: 1px solid #e3dee6; z-index: 1000; }
+        .nav-link { color: #137ad4; font-size: 0.8rem; cursor: pointer; }
         .nav-link.active { color: #0d6efd; }
         .nav-link i { font-size: 1.5rem; display: block; margin-bottom: 2px; }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-light bg-white shadow-sm sticky-top">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold text-primary" href="#"><i class="fa-solid fa-hands-helping"></i> LiveHelper</a>
         <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="goToLogin()" id="authBtn">
@@ -44,6 +43,45 @@
 </nav>
 
 <main class="container-fluid p-0">
+
+
+
+    <section id="screen-profile" class="screen">
+        <div class="bg-primary text-white p-4 rounded-bottom shadow-sm mb-4 text-center">
+            <div class="mb-3 mt-3">
+                <i class="fa-solid fa-circle-user fa-5x text-white opacity-75"></i>
+            </div>
+            <h2 class="fw-bold mb-0" id="profile-name">User Name</h2>
+            <p class="small opacity-75 text-uppercase fw-bold mb-0" id="profile-role">Role</p>
+        </div>
+
+        <div class="container px-4">
+          <div class="card border-0 shadow-sm mb-4 border-start border-4 border-warning" id="volunteer-stats" style="display:none;">
+                <div class="card-body text-center py-3">
+                    <h5 class="text-muted fw-bold mb-3">VOLUNTEER STATS</h5>
+                    <div class="row">
+                        <div class="col-6 border-end">
+                            <h1 class="display-4 fw-bold text-warning mb-0" id="profile-credits">0</h1>
+                            <p class="small text-muted mt-1 mb-0">Total Credits</p>
+                        </div>
+                        <div class="col-6">
+                            <h1 class="display-4 fw-bold text-warning mb-0"><span id="profile-rating">5.0</span></h1>
+                            <p class="small text-muted mt-1 mb-0">Avg Rating <i class="fa-solid fa-star text-warning"></i></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-3">
+                <button class="btn btn-light shadow-sm text-start py-3 fw-bold text-secondary">
+                    <i class="fa-solid fa-gear me-2"></i> Account Settings
+                </button>
+                <button class="btn btn-outline-danger shadow-sm py-3 fw-bold" onclick="logout()">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Log Out
+                </button>
+            </div>
+        </div>
+    </section>
 
     <section id="screen-home" class="screen active-screen">
         <div class="hero-section shadow">
@@ -139,9 +177,9 @@
         <div class="container px-4">
             <div class="card border-0 shadow-sm p-3">
                 
-                <form id="requestForm">
+              <form id="requestForm">
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">CURRENT LOCATION</label>
+                        <label class="form-label fw-bold small text-muted">EMBARKATION STOP (START)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-location-dot text-danger"></i></span>
                             <input type="text" class="form-control border-start-0 bg-light" id="locationDisplay" value="Tap button to locate..." readonly>
@@ -150,10 +188,22 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">DESTINATION</label>
+                        <label class="form-label fw-bold small text-muted">EXIT STOP (DESTINATION)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-map-pin text-primary"></i></span>
                             <input type="text" class="form-control border-start-0" id="destination" placeholder="e.g. King's Cross Station" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">TIME WINDOW</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-regular fa-clock text-warning"></i></span>
+                            <select class="form-select border-start-0" id="timeWindow">
+                                <option value="Immediately (0-15 mins)">Immediately (0-15 mins)</option>
+                                <option value="In 30 mins">In 30 mins</option>
+                                <option value="1 Hour +">1 Hour +</option>
+                            </select>
                         </div>
                     </div>
 
@@ -195,7 +245,7 @@
                 <h3>Connecting you to a volunteer</h3>
                 <p>Confirming volunteer details...</p>
             </div>
-    
+
             <div class="progress-container">
                 <div class="progress-bar"></div>
             </div>
@@ -210,8 +260,25 @@
                 </div>
                 <button class="cancel-btn" onclick="cancelRequest()">Cancel</button>
             </div>
+        </div> <div id="rating-overlay" class="connecting-card" style="display:none; z-index: 10000;">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fa-solid fa-circle-check fa-4x text-success"></i>
+                </div>
+                <h3 class="fw-bold mb-1">You have arrived!</h3>
+                <p class="text-muted mb-4">How was your volunteer?</p>
+                
+                <div class="d-flex justify-content-center gap-3 mb-4" id="star-container">
+                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(1)"></i>
+                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(2)"></i>
+                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(3)"></i>
+                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(4)"></i>
+                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(5)"></i>
+                </div>
+                
+                <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" onclick="submitRating()">Submit Rating</button>
+            </div>
         </div>
-
     </section>
 
     <section id="screen-volunteer" class="screen">
@@ -256,6 +323,9 @@
         </a>
         <a class="nav-link text-center" onclick="checkLogin('volunteer')">
             <i class="fa-solid fa-hand-holding-heart"></i> Volunteer
+        </a>
+        <a class="nav-link text-center" onclick="loadProfile()">
+            <i class="fa-solid fa-user"></i> Profile
         </a>
     </div>
 </nav>
