@@ -263,7 +263,8 @@ function getGPS() {
                     }
                 });
             },
-            () => { 
+            (error) => { 
+                console.log("GPS Error:", error);
                 display.value = "GPS Error (Using Default)"; 
                 userCoords = { lat: 51.505, lng: -0.09 }; 
             }
