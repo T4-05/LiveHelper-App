@@ -1,5 +1,5 @@
 // ✅ REST API (For Login/Database)
-const API_URL = 'https://adspkvmkg1.execute-api.us-east-1.amazonaws.com/default/LiveHelper-Login';
+const API_URL = 'https://zsc77qfohvxqopbuznvxnesa3a0cjudo.lambda-url.us-east-1.on.aws/';
 
 // ✅ NEW: WEBSOCKET API (For Live GPS Tracking)
 const WS_URL = 'wss://25j6a7ib12.execute-api.us-east-1.amazonaws.com/production/';
@@ -520,9 +520,14 @@ function initGoogleMap(userLat, userLng, destinationText) {
 
 window.onload = function() {
     const destInput = document.getElementById('destination');
-    if (destInput && google) new google.maps.places.Autocomplete(destInput);
+    if (destInput && google) {
+        new google.maps.places.Autocomplete(destInput, {
+            fields: ["formatted_address", "geometry", "name"],
+            strictBounds: false,
+            componentRestrictions: { country: "GB" } 
+        });
+    }
 };
-
 // Awards points to the Volunteer!
 async function completeJob() {
     // Send API Request to award +1 Credit FIRST
