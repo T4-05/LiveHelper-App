@@ -230,9 +230,28 @@ function connectLiveTracking() {
                     loadProfile(); 
                 }
             }
+        // ✅ NEW: Passenger cancelled while Volunteer was on the way!
+        } else if (data.type === 'job_cancelled_mid_trip' && currentUserRole === 'volunteer') {
+            const myEmail = document.getElementById('email').value || "Unknown";
+            
+            // If the passenger cancelled ON ME, reset my screen!
+            if (data.email === myEmail) {
+                alert("The passenger has cancelled the journey. Returning you to the feed.");
+
+                // Stop tracking GPS
+                if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
+                if (otherPersonMarker) otherPersonMarker.setMap(null);
+                otherPersonMarker = null;
+
+                // Hide the navigation map and show the feed again
+                document.getElementById('volunteer-nav').style.display = 'none';
+                document.getElementById('requests-feed').style.display = 'block';
+                loadVolunteerFeed();
+            }
         }
     };
 }
+    
 
 
 
@@ -597,9 +616,9 @@ async function cancelRequest() {
     // Stop sharing GPS
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
     
-    if (activeRequestId) {
+   if (activeRequestId) {
         try {
-            // ✅ FIX 1: MUST use 'await' so the database finishes cancelling BEFORE moving on!
+            // 1. MUST use 'await' so the database finishes cancelling BEFORE moving on!
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'cancel_request', requestId: activeRequestId })
@@ -607,13 +626,19 @@ async function cancelRequest() {
             
             activeRequestId = null; // Clear it from memory
             
-            // ✅ FIX 2: NOW it is safe to tell the volunteers to refresh their screens!
+            // 2. NOW it is safe to tell the volunteers to refresh their screens!
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
+                
+                // ✅ NEW: If a volunteer was already on the way, tell their phone to stop!
+                if (currentVolunteerEmail) {
+                    ws.send(JSON.stringify({ action: 'sync_location', type: 'job_cancelled_mid_trip', role: 'passenger', email: currentVolunteerEmail, lat: 0, lng: 0 }));
+                }
             }
         } catch (err) { console.error("Cancel Error:", err); }
     }
     
+    currentVolunteerEmail = ""; // ✅ Clear the volunteer from memory
     alert("Request cancelled.");
 }
 // ==========================================
