@@ -45,8 +45,7 @@
 <main class="container-fluid p-0">
 
 
-
-    <section id="screen-profile" class="screen">
+<section id="screen-profile" class="screen">
         <div class="bg-primary text-white p-4 rounded-bottom shadow-sm mb-4 text-center">
             <div class="mb-3 mt-3">
                 <i class="fa-solid fa-circle-user fa-5x text-white opacity-75"></i>
@@ -54,6 +53,24 @@
             <h2 class="fw-bold mb-0" id="profile-name">User Name</h2>
             <p class="small opacity-75 text-uppercase fw-bold mb-0" id="profile-role">Role</p>
         </div>
+
+        <div class="container px-4">
+            <div id="volunteer-stats" style="display:none;" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm text-center py-3">
+                            <h3 class="text-success fw-bold mb-0" id="profile-credits">0</h3>
+                            <small class="text-muted fw-bold">CREDITS</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm text-center py-3">
+                            <h3 class="text-warning fw-bold mb-0"><span id="profile-rating">New</span> <i class="fa-solid fa-star fs-5"></i></h3>
+                            <small class="text-muted fw-bold">RATING</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="d-grid gap-3">
                 <button class="btn btn-light shadow-sm text-start py-3 fw-bold text-secondary">
@@ -65,8 +82,7 @@
             </div>
         </div>
     </section>
-
-    <section id="screen-home" class="screen active-screen">
+<section id="screen-home" class="screen active-screen">
         <div class="hero-section shadow">
             <h1 class="display-6 fw-bold">Welcome!</h1>
             <p class="lead mb-0">How can we help you travel today?</p>
@@ -74,7 +90,7 @@
         
         <div class="container px-4">
             <div class="row g-3">
-                <div class="col-6">
+                <div class="col-6" id="home-card-passenger">
                     <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('passenger')">
                         <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
                             <i class="fa-solid fa-wheelchair text-primary fa-3x mb-3"></i>
@@ -83,7 +99,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-6" id="home-card-volunteer">
                     <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('volunteer')">
                         <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
                             <i class="fa-solid fa-hand-holding-heart text-success fa-3x mb-3"></i>
@@ -95,7 +111,6 @@
             </div>
         </div>
     </section>
-
     <section id="screen-login" class="screen">
         <div class="container mt-5 px-4">
             <div class="text-center mb-4">
@@ -247,7 +262,7 @@
                     </div>
                 </div>
             </div>
-            <div id="live-tracking-map" style="width: 100%; height: 450px; border-radius: 12px; background: grey; margin-bottom: 20px;"></div>
+            <div id="live-tracking-map" style="width: 100%; height: 350px; border-radius: 12px; background: grey; margin-bottom: 20px;"></div>
         </div>
 
         <div id="rating-overlay" class="connecting-card" style="display:none; z-index: 10000;">
@@ -315,10 +330,10 @@
         <a class="nav-link active text-center" onclick="showScreen('screen-home')">
             <i class="fa-solid fa-house"></i> Home
         </a>
-        <a class="nav-link text-center" onclick="checkLogin('passenger')">
+        <a class="nav-link text-center" id="nav-tab-passenger" onclick="checkLogin('passenger')">
             <i class="fa-solid fa-person-walking-with-cane"></i> Get Help
         </a>
-        <a class="nav-link text-center" onclick="checkLogin('volunteer')">
+        <a class="nav-link text-center" id="nav-tab-volunteer" onclick="checkLogin('volunteer')">
             <i class="fa-solid fa-hand-holding-heart"></i> Volunteer
         </a>
         <a class="nav-link text-center" onclick="loadProfile()">
@@ -326,7 +341,6 @@
         </a>
     </div>
 </nav>
-     
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>

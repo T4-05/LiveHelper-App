@@ -97,8 +97,8 @@ function connectLiveTracking() {
                 <div class="card border-success shadow-sm mb-2">
                     <div class="card-body p-2 d-flex justify-content-between align-items-center">
                         <div>
-                            <strong class="text-success">${extra.vName}</strong><br>
-                            <small class="text-muted">⭐ ${extra.vRating} Rating</small>
+                           <strong class="text-success">${extra.vName}</strong><br>
+                            <small class="text-muted">⭐ ${extra.vRating}</small>
                         </div>
                         <button class="btn btn-sm btn-success" onclick="acceptOffer('${extra.vEmail}', '${extra.reqId}', ${data.lat}, ${data.lng}, '${safeDest}', '${safeEmbark}')">Choose</button>
                     </div>
@@ -164,7 +164,7 @@ function connectLiveTracking() {
                 }
             }
 
-      // --- SCENARIO D: Volunteer is chosen by the Passenger ---
+        // --- SCENARIO D: Volunteer is chosen by the Passenger ---
         } else if (data.type === 'offer_accepted' && currentUserRole === 'volunteer') {
             try {
                 // 📦 UNPACK our hidden data
@@ -174,9 +174,19 @@ function connectLiveTracking() {
                 if (extra.vEmail === myEmail) {
                     alert("✅ The passenger chose you! Starting navigation.");
                     acceptRequest(extra.reqId, data.lat || 0, data.lng || 0, extra.dest, extra.embark, true, extra.routeIndex);
+                } else {
+                    // ✅ FIX: The passenger chose someone else! Refresh the feed so the job vanishes.
+                    loadVolunteerFeed();
                 }
             } catch(err) {
                 console.error("Handshake Error:", err);
+            }
+            
+        // ✅ NEW: A job was created or cancelled! Instantly update the list.
+        } else if (data.type === 'refresh_feeds' && currentUserRole === 'volunteer') {
+            // Only refresh if they are currently looking at the Volunteer feed
+            if (document.getElementById('screen-volunteer').classList.contains('active-screen')) {
+                loadVolunteerFeed();
             }
             
         // ✅ BUG 1 FIX: ADDED THE MISSING PASSENGER LOGIC HERE!    
@@ -205,13 +215,24 @@ function connectLiveTracking() {
             
             // 4. Stop broadcasting GPS to save battery
             if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
+            
+        // ✅ NEW: Volunteer instantly receives their new rating from the passenger
+        } else if (data.type === 'rating_updated' && currentUserRole === 'volunteer') {
+            const myEmail = document.getElementById('email').value || "Unknown";
+            
+            // If the rating was meant for me, update my local score instantly!
+            if (data.email === myEmail) {
+                currentUserRatingSum += data.lat; // We hid the stars in the lat variable!
+                currentUserRatingCount += 1;
+                
+                // If I am currently looking at my profile page, update the screen instantly!
+                if (document.getElementById('screen-profile').classList.contains('active-screen')) {
+                    loadProfile(); 
+                }
+            }
         }
-
-        
     };
-
 }
-        
 
 
 
@@ -232,6 +253,37 @@ function startBroadcastingGPS() {
         }, (err) => console.log("GPS Track Error:", err), { enableHighAccuracy: true });
     }
 }
+
+
+// ✅ NEW: Hides irrelevant buttons based on who is logged in!
+function updateUIVisibility() {
+    const homePassenger = document.getElementById('home-card-passenger');
+    const homeVolunteer = document.getElementById('home-card-volunteer');
+    const navPassenger = document.getElementById('nav-tab-passenger');
+    const navVolunteer = document.getElementById('nav-tab-volunteer');
+
+    // 1. Reset everything to visible by default
+    if(homePassenger) { homePassenger.style.display = ''; homePassenger.className = "col-6"; }
+    if(homeVolunteer) { homeVolunteer.style.display = ''; homeVolunteer.className = "col-6"; }
+    if(navPassenger) navPassenger.style.display = '';
+    if(navVolunteer) navVolunteer.style.display = '';
+
+    // 2. Hide the wrong buttons and make the remaining card full-width!
+    if (isLoggedIn) {
+        if (currentUserRole === 'passenger') {
+            if(homeVolunteer) homeVolunteer.style.display = 'none';
+            if(navVolunteer) navVolunteer.style.display = 'none';
+            if(homePassenger) homePassenger.className = "col-12"; // Expands to fill screen
+        } else if (currentUserRole === 'volunteer') {
+            if(homePassenger) homePassenger.style.display = 'none';
+            if(navPassenger) navPassenger.style.display = 'none';
+            if(homeVolunteer) homeVolunteer.className = "col-12"; // Expands to fill screen
+        }
+    }
+}
+
+
+
 
 // ==========================================
 // 2. NAVIGATION & AUTHENTICATION
@@ -277,8 +329,9 @@ function logout() {
     }
     showScreen('screen-home');
     alert("You have logged out.");
+    
+    updateUIVisibility(); // ✅ Instantly bring all buttons back!
 }
-
 function switchLoginTab(role) {
     const roleInput = document.getElementById('userRole');
     if(roleInput) roleInput.value = role;
@@ -320,12 +373,53 @@ if(authForm) {
         btn.innerHTML = 'Connecting...';
         btn.disabled = true;
 
-        const email = document.getElementById('email').value;
+        // ==========================================
+        // ✅ REGEX FORM VALIDATION
+        // ==========================================
+       // ✅ FIX: Added .trim() to clean up invisible spaces from autofill!
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const role = document.getElementById('userRole').value; 
         const mode = document.getElementById('authMode').value; 
-        const name = document.getElementById('fullName').value;
-        const phone = document.getElementById('phone').value;
+        const name = document.getElementById('fullName').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const passwordRegex = /^.{6,}$/; // Minimum 6 characters
+        const nameRegex = /^[a-zA-Z\s]{2,50}$/; // Letters and spaces only
+        const phoneRegex = /^\+?[0-9]{10,15}$/; // 10 to 15 digits
+
+        
+        // 1. Validate Email & Password (For both Login and Signup)
+        if (!emailRegex.test(email)) {
+            alert("Error: Please enter a valid email address.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return; // Stops the function from proceeding to AWS
+        }
+        if (!passwordRegex.test(password)) {
+            alert("Error: Password must be at least 6 characters long.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // 2. Validate Name & Phone (ONLY for Signup)
+        if (mode === 'signup') {
+            if (!nameRegex.test(name)) {
+                alert("Error: Please enter a valid name (letters and spaces only, min 2 characters).");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+            if (!phoneRegex.test(phone)) {
+                alert("Error: Please enter a valid phone number (10 to 15 digits).");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+        }
+        // ==========================================
 
         try {
             const response = await fetch(API_URL, {
@@ -343,13 +437,17 @@ if(authForm) {
           if (data.success) {
                 isLoggedIn = true;
                 currentUserRole = role; 
-                currentUserName = data.name || "Volunteer"; 
+                // ✅ FIX: Ensure empty names are handled properly!
+                const safeName = name.trim() !== '' ? name : "New User";
+                currentUserName = mode === 'signup' ? safeName : (data.name || "New User");
                 currentUserCredits = data.credits || 0;
                 
                 // ✅ NEW: Save rating data from the database
                 currentUserRatingSum = data.ratingSum || 0; 
                 currentUserRatingCount = data.ratingCount || 0; 
                 
+                updateUIVisibility(); // ✅ Instantly hide the other role's buttons!
+              
                 // Connect to WebSocket automatically on login
                 connectLiveTracking();
                 alert(mode === 'signup' ? "Account Created! Logged in." : "Welcome back!");
@@ -454,9 +552,9 @@ async function confirmSelection() {
     
     const previewDest = document.getElementById('preview-dest');
     if(previewDest) previewDest.innerText = dest;
-
-    try {
-        await fetch(API_URL, {
+try {
+        // ✅ FIX: Added 'const response =' to capture the reply from AWS
+        const response = await fetch(API_URL, {
             method: 'POST',
             body: JSON.stringify({
                 action: 'request_help', 
@@ -470,6 +568,17 @@ async function confirmSelection() {
             })
         });
         
+       // ✅ FIX: Read the response and save the ID globally so we can cancel it later!
+        const data = await response.json(); 
+        if (data.success) {
+            activeRequestId = data.requestId; 
+            
+            // 🚀 NEW: Tell all volunteers to refresh their screens instantly to see the new request!
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
+            }
+        }
+        
         // START SHARING GPS SO VOLUNTEER CAN FIND THEM
         startBroadcastingGPS();
 
@@ -478,17 +587,32 @@ async function confirmSelection() {
     }
 }
 
-function cancelRequest() {
-    // ✅ FIX: Hide all connecting overlays and tracking maps!
+// ✅ FIX: Added 'async' so we can talk to AWS
+async function cancelRequest() {
     document.getElementById('connecting-overlay').style.display = 'none';
     document.getElementById('map-container').style.display = 'none';
     document.getElementById('screen-passenger-tracking').style.display = 'none'; 
-    
-    // Bring the request form back
     document.getElementById('requestForm').style.display = 'block';
     
     // Stop sharing GPS
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
+    
+    if (activeRequestId) {
+        try {
+            // ✅ FIX 1: MUST use 'await' so the database finishes cancelling BEFORE moving on!
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'cancel_request', requestId: activeRequestId })
+            });
+            
+            activeRequestId = null; // Clear it from memory
+            
+            // ✅ FIX 2: NOW it is safe to tell the volunteers to refresh their screens!
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
+            }
+        } catch (err) { console.error("Cancel Error:", err); }
+    }
     
     alert("Request cancelled.");
 }
@@ -570,7 +694,9 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
         const data = await res.json();
 
         if (!data.success) {
-            alert("Failed to accept request.");
+            // ✅ FIX: Tell the volunteer the job is gone and refresh the feed!
+            alert("Sorry! This request was just taken by another volunteer or cancelled by the passenger.");
+            loadVolunteerFeed(); 
             return;
         }
     } catch (err) {
@@ -702,13 +828,20 @@ function initGoogleMap(userLat, userLng, destinationText) {
         }
     });
 }
-
 window.onload = function() {
     const destInput = document.getElementById('destination');
     if (destInput && google) {
+        
+        // 1. Define the invisible GPS box around Greater London
+        const londonBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(51.286760, -0.510375), // South-West Corner (Surrey/Berkshire border)
+            new google.maps.LatLng(51.691874, 0.334015)   // North-East Corner (Essex border)
+        );
+
         new google.maps.places.Autocomplete(destInput, {
+            bounds: londonBounds,
+            strictBounds: true, // ✅ FIX: Forces Google to ONLY show results inside the London box!
             fields: ["formatted_address", "geometry", "name"],
-            strictBounds: false,
             componentRestrictions: { country: "GB" } 
         });
     }
@@ -777,14 +910,13 @@ function loadProfile() {
         document.getElementById('volunteer-stats').style.display = 'block';
         document.getElementById('profile-credits').innerText = currentUserCredits;
         
-        // ✅ NEW: Calculate the average rating!
-        let avgRating = 5.0; // Default to 5.0 if they have no ratings yet
+       // ✅ NEW: Show "New" for zero trips, just like Uber!
+        let avgRating = "New"; 
         if (currentUserRatingCount > 0) {
-            // Divide total stars by number of reviews, and round to 1 decimal place (e.g. 4.8)
+            // Divide total stars by number of reviews, and round to 1 decimal place
             avgRating = (currentUserRatingSum / currentUserRatingCount).toFixed(1);
         }
         document.getElementById('profile-rating').innerText = avgRating;
-        
     } else {
         document.getElementById('volunteer-stats').style.display = 'none';
     }
@@ -816,8 +948,21 @@ function setRating(stars) {
     });
 }
 
-async function submitRating() {
+
+  async function submitRating() {
     try {
+        // 🚀 NEW: Instantly tell the volunteer their new rating via WebSockets!
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                action: 'sync_location',
+                type: 'rating_updated',
+                role: 'passenger',
+                email: currentVolunteerEmail, // Send it directly to the volunteer who helped
+                lat: selectedRating, // Sneak the 1-5 star rating in the latitude variable!
+                lng: 0
+            }));
+        }
+
         await fetch(API_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -839,7 +984,6 @@ async function submitRating() {
     // Go home
     showScreen('screen-home');
 }
-
 function acceptOffer(volEmail, reqId, lat, lng, dest, embark) {
     document.getElementById('connecting-overlay').style.display = 'none';
     alert("You selected a volunteer! They are now routing to your location.");
@@ -872,7 +1016,8 @@ function acceptOffer(volEmail, reqId, lat, lng, dest, embark) {
 function sendOffer(requestId, passengerLat, passengerLng, destName, embarkName) {
     alert("Offer sent! Waiting for the passenger to choose you...");
     
-    let rating = 5.0;
+    // ✅ FIX: Set default rating to New
+    let rating = "New";
     if (currentUserRatingCount > 0) {
         rating = (currentUserRatingSum / currentUserRatingCount).toFixed(1);
     }
