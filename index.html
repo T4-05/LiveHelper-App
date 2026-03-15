@@ -5,160 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LiveHelper</title>
     
-   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjhBy2T_kEXacyGP9ufQ4DwDnb8ItbN4c&libraries=places&loading=async"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjhBy2T_kEXacyGP9ufQ4DwDnb8ItbN4c&libraries=places&loading=async"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { 
-            background-color: #b7c2f0; 
-            overflow: hidden; /* Keep body fixed */
-            display: flex;
-            flex-direction: column;
-            height: 100vh; /* Full screen height */
-        }
-        main { 
-            flex: 1; 
-            overflow-y: auto; /* ✅ ALLOWS SCROLLING HERE */
-            padding-bottom: 100px; /* Extra space for bottom nav */
-        }
-        .screen { display: none; }
-        .active-screen { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .hero-section { background: linear-gradient(135deg, #e4079a, #0dcaf0); color: rgb(245, 234, 234); border-radius: 0 0 20px 20px; padding: 40px 20px; text-align: center; margin-bottom: 20px; }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgb(228, 208, 250); border-top: 1px solid #e3dee6; z-index: 1000; }
-        .nav-link { color: #137ad4; font-size: 0.8rem; cursor: pointer; }
-        .nav-link.active { color: #0d6efd; }
-        .nav-link i { font-size: 1.5rem; display: block; margin-bottom: 2px; }
-    </style>
 </head>
 <body>
 
-    <div class="container-fluid">
-        <a class="navbar-brand fw-bold text-primary" href="#"><i class="fa-solid fa-hands-helping"></i> LiveHelper</a>
-        <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="goToLogin()" id="authBtn">
-            Log In <i class="fa-solid fa-arrow-right-to-bracket"></i>
+    <header class="top-header d-flex justify-content-between align-items-center px-4 py-3">
+        <a class="navbar-brand fw-bold" href="#" style="font-size: 1.3rem; text-decoration: none;">
+            <i class="fa-solid fa-hands-holding-circle me-1"></i> LiveHelper
+        </a>
+        <button class="btn btn-primary btn-sm px-3 py-2" onclick="goToLogin()" id="authBtn">
+            Log In <i class="fa-solid fa-arrow-right-to-bracket ms-1"></i>
         </button>
-    </div>
-</nav>
+    </header>
 
 <main class="container-fluid p-0">
 
-
-<section id="screen-profile" class="screen">
-        <div class="bg-primary text-white p-4 rounded-bottom shadow-sm mb-4 text-center">
-            <div class="mb-3 mt-3">
-                <i class="fa-solid fa-circle-user fa-5x text-white opacity-75"></i>
-            </div>
-            <h2 class="fw-bold mb-0" id="profile-name">User Name</h2>
-            <p class="small opacity-75 text-uppercase fw-bold mb-0" id="profile-role">Role</p>
-        </div>
-
-        <div class="container px-4">
-            <div id="volunteer-stats" style="display:none;" class="mb-4">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="card border-0 shadow-sm text-center py-3">
-                            <h3 class="text-success fw-bold mb-0" id="profile-credits">0</h3>
-                            <small class="text-muted fw-bold">CREDITS</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="card border-0 shadow-sm text-center py-3">
-                            <h3 class="text-warning fw-bold mb-0"><span id="profile-rating">New</span> <i class="fa-solid fa-star fs-5"></i></h3>
-                            <small class="text-muted fw-bold">RATING</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-grid gap-3">
-                <button class="btn btn-light shadow-sm text-start py-3 fw-bold text-secondary">
-                    <i class="fa-solid fa-gear me-2"></i> Account Settings
-                </button>
-                <button class="btn btn-outline-danger shadow-sm py-3 fw-bold" onclick="logout()">
-                    <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Log Out
-                </button>
-            </div>
-        </div>
-    </section>
-<section id="screen-home" class="screen active-screen">
-        <div class="hero-section shadow">
-            <h1 class="display-6 fw-bold">Welcome!</h1>
-            <p class="lead mb-0">How can we help you travel today?</p>
+  <section id="screen-home" class="screen active-screen">
+        <div class="hero-section">
+            <h1 class="display-4 fw-bold mb-2">Welcome! 👋</h1>
+            <p class="lead mb-0 opacity-100 fw-medium" style="font-size: 1.2rem;">How can we help you travel today?</p>
         </div>
         
-        <div class="container px-4">
+        <div class="container px-4 mt-4">
             <div class="row g-3">
                 <div class="col-6" id="home-card-passenger">
-                    <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('passenger')">
+                    <div class="card card-help h-100" onclick="handleActionClick('passenger')" style="cursor:pointer;">
                         <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
-                            <i class="fa-solid fa-wheelchair text-primary fa-3x mb-3"></i>
-                            <h5 class="card-title text-primary fw-bold">I Need Help</h5>
-                            <p class="card-text small text-muted">Find a volunteer</p>
+                            <div class="icon-box p-3 rounded-circle mb-3">
+                                <i class="fa-solid fa-wheelchair fa-2x"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Get Help</h5>
+                            <p class="card-text small text-muted mb-0 fw-bold">Find a guide</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-6" id="home-card-volunteer">
-                    <div class="card shadow-sm h-100 border-0" onclick="handleActionClick('volunteer')">
+                    <div class="card card-vol h-100" onclick="handleActionClick('volunteer')" style="cursor:pointer;">
                         <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-4">
-                            <i class="fa-solid fa-hand-holding-heart text-success fa-3x mb-3"></i>
-                            <h5 class="card-title text-success fw-bold">Volunteer</h5>
-                            <p class="card-text small text-muted">Offer assistance</p>
+                            <div class="icon-box p-3 rounded-circle mb-3">
+                                <i class="fa-solid fa-hand-holding-heart fa-2x"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Volunteer</h5>
+                            <p class="card-text small text-muted mb-0 fw-bold">Offer assistance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container px-4 mt-5 mb-5 pb-4">
+            <h4 class="fw-bold mb-4 text-center" style="color: #1e293b;">How LiveHelper Works</h4>
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-start">
+                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm flex-shrink-0" style="width: 40px; height: 40px; font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, #4f46e5, #ec4899);">1</div>
+                        <div class="ms-3">
+                            <h6 class="fw-bold mb-1" style="color: #334155;">Request Assistance</h6>
+                            <p class="text-muted small mb-0 fw-medium">Select your starting point, destination, and the specific type of help you need.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-start">
+                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm flex-shrink-0" style="width: 40px; height: 40px; font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, #4f46e5, #ec4899);">2</div>
+                        <div class="ms-3">
+                            <h6 class="fw-bold mb-1" style="color: #334155;">Get Matched</h6>
+                            <p class="text-muted small mb-0 fw-medium">Nearby volunteers are instantly notified. Review offers and select your helper.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-start">
+                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm flex-shrink-0" style="width: 40px; height: 40px; font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, #4f46e5, #ec4899);">3</div>
+                        <div class="ms-3">
+                            <h6 class="fw-bold mb-1" style="color: #334155;">Live Tracking</h6>
+                            <p class="text-muted small mb-0 fw-medium">Watch your volunteer arrive in real-time with an Uber-style map and live ETA.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-start">
+                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm flex-shrink-0" style="width: 40px; height: 40px; font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, #4f46e5, #ec4899);">4</div>
+                        <div class="ms-3">
+                            <h6 class="fw-bold mb-1" style="color: #334155;">Rate Your Journey</h6>
+                            <p class="text-muted small mb-0 fw-medium">Arrive safely and leave a star rating to help maintain our trustworthy community.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
+
     <section id="screen-login" class="screen">
         <div class="container mt-5 px-4">
-            <div class="text-center mb-4">
-                <i class="fa-solid fa-user-circle fa-4x text-primary mb-3"></i>
-                <h2 class="fw-bold" id="auth-title">Sign In</h2>
-                <p class="text-muted">Access your account to continue</p>
+            <div class="text-center mb-4 mt-4">
+                <div class="d-inline-block p-4 rounded-circle mb-3 shadow-sm" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe);">
+                    <i class="fa-solid fa-face-smile-wink fa-4x text-primary"></i>
+                </div>
+                <h2 class="fw-bold text-dark" id="auth-title">Welcome Back!</h2>
+                <p class="text-muted fw-bold">Sign in to continue</p>
             </div>
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <ul class="nav nav-pills nav-fill mb-4">
+            <div class="card p-2" style="margin-bottom: 120px;">
+                <div class="card-body p-3">
+                    <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-pill border">
                         <li class="nav-item">
-                            <button class="nav-link active" id="tab-passenger" onclick="switchLoginTab('passenger')">Passenger</button>
+                            <button class="nav-link active rounded-pill fw-bold" id="tab-passenger" onclick="switchLoginTab('passenger')">Passenger</button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link" id="tab-volunteer" onclick="switchLoginTab('volunteer')">Volunteer</button>
+                            <button class="nav-link rounded-pill fw-bold" id="tab-volunteer" onclick="switchLoginTab('volunteer')">Volunteer</button>
                         </li>
                     </ul>
 
                     <form id="authForm">
                         <input type="hidden" id="userRole" value="passenger">
-                        <input type="hidden" id="authMode" value="login"> <div id="signup-fields" style="display:none;">
-                            <div class="form-floating mb-3">
-                                <input type="text" class="form-control" id="fullName" placeholder="John Doe">
-                                <label for="fullName">Full Name</label>
+                        <input type="hidden" id="authMode" value="login"> 
+                        <div id="signup-fields" style="display:none;">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="fullName" placeholder="Full Name">
                             </div>
-                            <div class="form-floating mb-3">
-                                <input type="tel" class="form-control" id="phone" placeholder="07700900000">
-                                <label for="phone">Phone Number</label>
+                            <div class="mb-3">
+                                <input type="tel" class="form-control" id="phone" placeholder="Phone Number">
                             </div>
                         </div>
 
-                        <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
-                            <label for="email">Email address</label>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" id="email" placeholder="Email Address" required>
                         </div>
-                        <div class="form-floating mb-3">
+                        <div class="mb-4">
                             <input type="password" class="form-control" id="password" placeholder="Password" required>
-                            <label for="password">Password</label>
                         </div>
                         
-                        <div class="d-grid gap-2">
+                        <div class="d-grid gap-3">
                             <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">Log In</button>
-                            <button type="button" class="btn btn-light" onclick="showScreen('screen-home')">Cancel</button>
+                            <button type="button" class="btn btn-light fw-bold text-muted border" onclick="showScreen('screen-home')">Cancel</button>
                         </div>
 
-                        <div class="text-center mt-3">
-                            <p class="small text-muted" id="toggleText">New here? <a href="#" onclick="toggleAuthMode()">Create Account</a></p>
+                        <div class="text-center mt-4">
+                            <p class="fw-bold text-muted" id="toggleText">New here? <a href="#" class="text-primary text-decoration-none ms-1" onclick="toggleAuthMode()">Create Account</a></p>
                         </div>
                     </form>
                 </div>
@@ -167,183 +154,233 @@
     </section>
 
     <section id="screen-passenger" class="screen">
-        <div class="bg-primary text-white p-4 rounded-bottom shadow-sm mb-3">
-            <h2 class="fw-bold mb-0">Request Help</h2>
-            <p class="small opacity-75 mb-0">Let's get you moving.</p>
+        <div class="hero-section text-start pb-5">
+            <h2 class="fw-bold mb-1">Request Help 📍</h2>
+            <p class="opacity-100 fw-medium mb-0">Let's get you moving safely.</p>
         </div>
             
-        <div class="container px-4">
-            <div class="card border-0 shadow-sm p-3">
-                
-              <form id="requestForm">
+        <div class="container px-4" style="margin-top: -30px;">
+            <div class="card p-3">
+                <form id="requestForm">
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">EMBARKATION STOP (START)</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-location-dot text-danger"></i></span>
-                            <input type="text" class="form-control border-start-0 bg-light" id="locationDisplay" value="Tap button to locate..." readonly>
-                            <button class="btn btn-outline-primary" type="button" onclick="getGPS()"><i class="fa-solid fa-crosshairs"></i></button>
+                        <label class="form-label fw-bold text-muted mb-1 ms-1" style="font-size: 0.8rem;">STARTING POINT</label>
+                        <div class="input-group shadow-sm" style="border-radius: 16px; overflow: hidden;">
+                            <span class="input-group-text border-end-0 bg-white"><i class="fa-solid fa-street-view text-danger"></i></span>
+                            <input type="text" class="form-control border-start-0 border-end-0 bg-white" id="locationDisplay" value="Tap button to locate..." readonly>
+                            <button class="btn btn-light border-start-0 bg-white" type="button" onclick="getGPS()"><i class="fa-solid fa-location-crosshairs text-primary fa-lg"></i></button>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">EXIT STOP (DESTINATION)</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-map-pin text-primary"></i></span>
+                        <label class="form-label fw-bold text-muted mb-1 ms-1" style="font-size: 0.8rem;">DESTINATION</label>
+                        <div class="input-group shadow-sm" style="border-radius: 16px; overflow: hidden;">
+                            <span class="input-group-text border-end-0 bg-white"><i class="fa-solid fa-flag-checkered text-success"></i></span>
                             <input type="text" class="form-control border-start-0" id="destination" placeholder="e.g. King's Cross Station" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">TIME WINDOW</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0"><i class="fa-regular fa-clock text-warning"></i></span>
-                            <select class="form-select border-start-0" id="timeWindow">
-                                <option value="Immediately (0-15 mins)">Immediately (0-15 mins)</option>
-                                <option value="In 30 mins">In 30 mins</option>
-                                <option value="1 Hour +">1 Hour +</option>
-                            </select>
-                        </div>
+                        <label class="form-label fw-bold text-muted mb-1 ms-1" style="font-size: 0.8rem;">TIME WINDOW</label>
+                        <select class="form-select shadow-sm" id="timeWindow">
+                            <option value="Immediately (0-15 mins)">⚡ Immediately (0-15 mins)</option>
+                            <option value="In 30 mins">🕒 In 30 mins</option>
+                            <option value="1 Hour +">🗓️ 1 Hour +</option>
+                        </select>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-bold small text-muted">TYPE OF ASSISTANCE</label>
-                        <select class="form-select" id="helpType">
-                            <option value="Visual Guidance">Visual Guidance (Blind/Low Vision)</option>
-                            <option value="Wheelchair Support">Wheelchair Support</option>
-                            <option value="Autism Support">Autism/Anxiety Support</option>
-                            <option value="Heavy Lifting">Help with Luggage</option>
+                        <label class="form-label fw-bold text-muted mb-1 ms-1" style="font-size: 0.8rem;">TYPE OF ASSISTANCE</label>
+                        <select class="form-select shadow-sm" id="helpType">
+                            <option value="Visual Guidance">🦯 Visual Guidance</option>
+                            <option value="Wheelchair Support">🦽 Wheelchair Support</option>
+                            <option value="Autism Support">🎧 Autism/Anxiety Support</option>
+                            <option value="Heavy Lifting">🧳 Help with Luggage</option>
                         </select>
                     </div>
 
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg shadow-sm">
-                            Find Volunteer <i class="fa-solid fa-magnifying-glass ms-2"></i>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            Find Volunteer <i class="fa-solid fa-paper-plane ms-2"></i>
                         </button>
                     </div>
                 </form>
 
                 <div id="map-container" style="display:none; margin-top: 15px;">
-                    <div id="google-map" style="width: 100%; height: 350px; border-radius: 12px; margin-bottom: 10px;"></div>
+                    <div id="google-map" style="width: 100%; height: 250px; border-radius: 16px; margin-bottom: 15px; border: 2px solid #e2e8f0;"></div>
                   
-                    <h5 class="fw-bold text-muted mb-2">Select a Route:</h5>
-                    <div id="directions-panel" style="width: 100%; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #dee2e6; border-radius: 12px; margin-bottom: 15px; padding: 10px;"></div>
+                    <h6 class="fw-bold text-dark mb-2 ms-1">Select a Route:</h6>
+                    <div id="directions-panel" style="width: 100%; max-height: 200px; overflow-y: auto; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px; margin-bottom: 20px; padding: 10px;"></div>
                   
-                    <button class="btn btn-success w-100 py-3 fw-bold shadow-sm" onclick="confirmSelection()">
-                            Confirm Route & Find Volunteer <i class="fa-solid fa-arrow-right ms-2"></i>
-                        </button>
-                    
-                      <button class="btn btn-outline-danger w-100 mt-2" onclick="cancelRequest()">Cancel</button>
+                    <button class="btn btn-primary w-100 py-3 mb-2" onclick="confirmSelection()">
+                            Confirm Route <i class="fa-solid fa-check-circle ms-2"></i>
+                    </button>
+                    <button class="btn btn-light w-100 text-danger fw-bold border" onclick="cancelRequest()">Cancel</button>
                 </div>
-
             </div>
         </div>
 
         <div id="connecting-overlay" class="connecting-card">
-            <div class="connecting-header">
-                <h3>Finding Volunteers...</h3>
-                <p>Waiting for volunteers to offer help...</p>
+            <div class="text-center">
+                <div class="spinner-grow text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <h3 class="fw-bold">Finding Volunteers...</h3>
+                <p class="text-muted fw-bold">Broadcasting to nearby helpers</p>
             </div>
-            
-            <div id="volunteer-offers-list" class="d-grid gap-2 mt-3 mb-3 p-2" style="max-height: 200px; overflow-y: auto;">
-                <div class="text-center text-muted small spinner-border mx-auto" role="status"></div>
+            <div id="volunteer-offers-list" class="d-grid gap-2 mt-3 mb-4 p-2" style="max-height: 200px; overflow-y: auto;">
+                <div class="text-center text-primary spinner-border mx-auto" role="status"></div>
             </div>
-
-           <button class="btn btn-outline-danger w-100" onclick="cancelRequest()">Cancel Request</button>
+           <button class="btn btn-light border text-danger w-100 fw-bold" onclick="cancelRequest()">Cancel Request</button>
         </div>
 
-      <div id="screen-passenger-tracking" style="display:none; margin-top: 15px;">
-            <div class="card border-primary mb-2 shadow-sm" style="border-radius: 12px; margin-top: 15px;">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                    <div><i class="fa-solid fa-hand-holding-heart fa-2x text-success me-3"></i></div>
+        <div id="screen-passenger-tracking" style="display:none; margin-top: 15px;" class="container px-4">
+            <div class="card mb-3 p-2 border-2" style="border-color: #10b981 !important;">
+                <div class="card-body p-2 d-flex align-items-center justify-content-between">
+                    <div class="bg-success text-white p-3 rounded-circle me-3 shadow-sm">
+                        <i class="fa-solid fa-handshake-angle fa-2x"></i>
+                    </div>
                     <div class="flex-grow-1">
-                        <h6 class="fw-bold mb-0">Volunteer Approaching</h6>
-                        <span id="tracking-eta-text" class="text-primary fw-bold display-6">-- min</span>
-                        <small id="tracking-distance-text" class="text-muted d-block">-- km away</small>
+                        <h6 class="fw-bold mb-0 text-dark">Volunteer Approaching</h6>
+                        <span id="tracking-eta-text" class="text-success fw-bold display-6">-- min</span>
+                        <small id="tracking-distance-text" class="text-muted d-block fw-bold">-- km away</small>
                     </div>
                 </div>
             </div>
-            <div id="live-tracking-map" style="width: 100%; height: 250px; border-radius: 12px; background: grey; margin-bottom: 20px;"></div>
+            <div id="live-tracking-map" style="width: 100%; height: 250px; border-radius: 20px; background: #e9ecef; margin-bottom: 20px; box-shadow: inset 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #e2e8f0;"></div>
             
-            <button class="btn btn-outline-danger w-100 fw-bold shadow-sm mb-4" onclick="cancelRequest()">
-                <i class="fa-solid fa-xmark me-2"></i> Cancel Journey
+            <button class="btn btn-light text-danger w-100 fw-bold border-2" onclick="cancelRequest()">
+                <i class="fa-solid fa-circle-xmark me-2"></i> Cancel Journey
             </button>
         </div>
 
         <div id="rating-overlay" class="connecting-card" style="display:none; z-index: 10000;">
             <div class="text-center">
-                <div class="mb-3">
-                    <i class="fa-solid fa-circle-check fa-4x text-success"></i>
+                <div class="mb-3 bg-success text-white rounded-circle d-inline-block p-4 shadow">
+                    <i class="fa-solid fa-party-horn fa-3x"></i>
                 </div>
-                <h3 class="fw-bold mb-1">You have arrived!</h3>
-                <p class="text-muted mb-4">How was your volunteer?</p>
+                <h2 class="fw-bold mb-1 text-dark">You Arrived! 🎉</h2>
+                <p class="text-muted fw-bold mb-4">How was your volunteer?</p>
                 
                 <div class="d-flex justify-content-center gap-3 mb-4" id="star-container">
-                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(1)"></i>
-                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(2)"></i>
-                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(3)"></i>
-                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(4)"></i>
-                    <i class="fa-solid fa-star fa-2x text-warning" style="cursor:pointer;" onclick="setRating(5)"></i>
+                    <i class="fa-solid fa-star fa-3x text-warning" style="cursor:pointer; transition: transform 0.2s;" onclick="setRating(1)"></i>
+                    <i class="fa-solid fa-star fa-3x text-warning" style="cursor:pointer; transition: transform 0.2s;" onclick="setRating(2)"></i>
+                    <i class="fa-solid fa-star fa-3x text-warning" style="cursor:pointer; transition: transform 0.2s;" onclick="setRating(3)"></i>
+                    <i class="fa-solid fa-star fa-3x text-warning" style="cursor:pointer; transition: transform 0.2s;" onclick="setRating(4)"></i>
+                    <i class="fa-solid fa-star fa-3x text-warning" style="cursor:pointer; transition: transform 0.2s;" onclick="setRating(5)"></i>
                 </div>
                 
-                <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" onclick="submitRating()">Submit Rating</button>
+                <button class="btn btn-primary w-100 py-3" onclick="submitRating()">Submit Rating</button>
             </div>
         </div>
     </section>
 
     <section id="screen-volunteer" class="screen">
-        <div class="bg-success text-white p-4 rounded-bottom shadow-sm mb-3 d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="fw-bold mb-0">Volunteer Feed</h2>
-                <p class="small opacity-75 mb-0">Nearby requests</p>
+       <div class="hero-section text-start pb-5" style="background: linear-gradient(135deg, #10b981, #047857);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="fw-bold mb-1">Volunteer Feed 🤝</h2>
+                    <p class="fw-medium opacity-100 mb-0">Nearby people who need you</p>
+                </div>
+                </div>
+        </div>
+        <div class="container px-4" id="requests-feed" style="margin-top: -30px;">
+            <div class="card p-5 text-center text-muted border-2 border-dashed">
+                <div class="spinner-border text-success mx-auto mb-3" role="status"></div>
+                <p class="fw-bold mb-0">Scanning your area...</p>
             </div>
-            <button class="btn btn-sm btn-outline-light" onclick="logout()">Log Out</button>
         </div>
 
-        <div class="container px-4" id="requests-feed">
-            <div class="text-center text-muted py-5">
-                <div class="spinner-border text-success mb-3" role="status"></div>
-                <p>Scanning for requests...</p>
-            </div>
-        </div>
-
-        <div class="container px-4" id="volunteer-nav" style="display:none;">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body">
-                    <h5 class="fw-bold text-success" id="vol-nav-title"><i class="fa-solid fa-person-walking-arrow-right"></i> Heading to Passenger</h5>
-                    <p class="text-muted mb-2" id="nav-dest">Meeting at: ...</p>
+        <div class="container px-4 mt-3" id="volunteer-nav" style="display:none;">
+            <div class="card mb-3 border-2" style="border-color: #4f46e5 !important;">
+                <div class="card-body p-3">
+                    <h5 class="fw-bold text-primary mb-1" id="vol-nav-title"><i class="fa-solid fa-person-walking-arrow-right me-2"></i>Heading to Passenger</h5>
+                    <p class="text-muted fw-bold small mb-3" id="nav-dest">Meeting at: ...</p>
                     
-                    <div id="vol-directions-panel" style="width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 15px; padding: 10px;"></div>
+                    <div id="vol-directions-panel" style="width: 100%; max-height: 150px; overflow-y: auto; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; padding: 10px;"></div>
 
-                    <button id="btn-nearby" class="btn btn-primary w-100 fw-bold mb-2 py-3 shadow-sm" onclick="imNearby()">
-                        <i class="fa-solid fa-hand-wave"></i> I'm Nearby (Start Journey)
+                    <button id="btn-nearby" class="btn btn-primary w-100 mb-2 py-3 shadow-sm" onclick="imNearby()">
+                        <i class="fa-solid fa-hand-wave me-2"></i> I'm Nearby (Start)
                     </button>
 
-                    <button id="btn-complete" class="btn btn-success w-100 fw-bold py-3 shadow-sm" onclick="completeJob()" style="display:none;">
-                        <i class="fa-solid fa-check-double"></i> Arrived at Destination
+                    <button id="btn-complete" class="btn btn-success w-100 py-3 shadow-sm" onclick="completeJob()" style="display:none;">
+                        <i class="fa-solid fa-flag-checkered me-2"></i> Job Complete
                     </button>
                 </div>
             </div>
-            <div id="volunteer-map" style="width: 100%; height: 400px; background: #e9ecef; border-radius: 12px; margin-bottom: 20px;"></div>
+            <div id="volunteer-map" style="width: 100%; height: 250px; background: #e9ecef; border-radius: 20px; margin-bottom: 20px; border: 2px solid #e2e8f0; box-shadow: inset 0 4px 6px rgba(0,0,0,0.1);"></div>
+        </div>
+    </section>
+
+    <section id="screen-profile" class="screen">
+        <div class="hero-section pb-5 text-center">
+            <div class="mb-2 mt-4">
+                <img src="https://ui-avatars.com/api/?name=User&background=ffffff&color=4f46e5&size=100&rounded=true" id="profile-avatar" alt="Avatar" class="shadow-lg border border-4 border-white">
+            </div>
+            <h2 class="fw-bold mb-0 mt-2" id="profile-name">User Name</h2>
+            <p class="small opacity-100 text-uppercase fw-bold mb-0" id="profile-role">Role</p>
+        </div>
+
+        <div class="container px-4" style="margin-top: -30px;">
+            <div id="volunteer-stats" style="display:none;" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="card text-center py-4 card-vol">
+                            <h2 class="text-success fw-bold mb-0" id="profile-credits">0</h2>
+                            <small class="text-success fw-bold" style="font-size: 0.75rem;">CREDITS EARNED</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card text-center py-4" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #fcd34d;">
+                            <h2 class="text-warning fw-bold mb-0" style="color: #d97706 !important;"><span id="profile-rating">New</span> <i class="fa-solid fa-star fs-5"></i></h2>
+                            <small class="fw-bold" style="font-size: 0.75rem; color: #b45309;">RATING</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-2">
+                <div class="list-group list-group-flush rounded-4">
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center border-0 mb-1">
+                        <div class="bg-light p-2 rounded-circle me-3"><i class="fa-solid fa-gear text-secondary"></i></div>
+                        <span class="fw-bold text-dark">Account Settings</span>
+                        <i class="fa-solid fa-chevron-right ms-auto text-muted small"></i>
+                    </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center text-danger border-0" onclick="logout()">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3"><i class="fa-solid fa-arrow-right-from-bracket text-danger"></i></div>
+                        <span class="fw-bold">Log Out</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </section>
 
 </main>
 
-<nav class="bottom-nav">
-    <div class="container d-flex justify-content-around py-2">
-        <a class="nav-link active text-center" onclick="showScreen('screen-home')">
-            <i class="fa-solid fa-house"></i> Home
-        </a>
-        <a class="nav-link text-center" id="nav-tab-passenger" onclick="checkLogin('passenger')">
-            <i class="fa-solid fa-person-walking-with-cane"></i> Get Help
-        </a>
-        <a class="nav-link text-center" id="nav-tab-volunteer" onclick="checkLogin('volunteer')">
-            <i class="fa-solid fa-hand-holding-heart"></i> Volunteer
-        </a>
-        <a class="nav-link text-center" onclick="loadProfile()">
-            <i class="fa-solid fa-user"></i> Profile
-        </a>
+<div class="modal fade" id="customModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px; margin: 0 auto;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-1">
+                <h5 class="modal-title fw-bold text-primary" id="customModalTitle">LiveHelper</h5>
+            </div>
+            <div class="modal-body text-dark fw-medium py-3" id="customModalBody" style="font-size: 1.05rem;">
+                </div>
+            <div class="modal-footer border-0 pt-0" id="customModalFooter">
+                </div>
+        </div>
     </div>
+</div>
+
+<nav class="bottom-nav d-flex justify-content-between align-items-center">
+    <a class="nav-link active text-center flex-fill" onclick="showScreen('screen-home')">
+        <i class="fa-solid fa-house"></i> Home
+    </a>
+    <a class="nav-link text-center flex-fill" id="nav-tab-passenger" onclick="checkLogin('passenger')">
+        <i class="fa-solid fa-wheelchair"></i> Help
+    </a>
+    <a class="nav-link text-center flex-fill" id="nav-tab-volunteer" onclick="checkLogin('volunteer')">
+        <i class="fa-solid fa-hand-holding-heart"></i> Volunteer
+    </a>
+    <a class="nav-link text-center flex-fill" onclick="loadProfile()">
+        <i class="fa-solid fa-user"></i> Profile
+    </a>
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

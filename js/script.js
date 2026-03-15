@@ -32,7 +32,48 @@ let passengerMarker = null; // Saves the passenger's marker on the map
 let volunteerMarker = null; // Saves the volunteer's moving marker
 let distanceMatrixService = null; // Used to calculate the Uber ETA!
 
+// ==========================================
+// ✅ OVERRIDE DEFAULT ALERTS WITH BOOTSTRAP MODALS
+// ==========================================
+window.alert = function(message) {
+    document.getElementById('customModalTitle').innerText = "LiveHelper";
+    document.getElementById('customModalBody').innerText = message;
+    
+    const footer = document.getElementById('customModalFooter');
+    footer.innerHTML = `<button type="button" class="btn btn-primary px-4 rounded-pill" data-bs-dismiss="modal">OK</button>`;
+    
+    const modalEl = document.getElementById('customModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+};
 
+// Custom Async Confirm Modal (replaces window.confirm)
+function customConfirm(message, title = "Please Confirm") {
+    return new Promise((resolve) => {
+        document.getElementById('customModalTitle').innerText = title;
+        document.getElementById('customModalBody').innerText = message;
+        
+        const footer = document.getElementById('customModalFooter');
+        footer.innerHTML = `
+            <button type="button" class="btn btn-light border px-3 rounded-pill" data-bs-dismiss="modal" id="btnConfirmCancel">Cancel</button>
+            <button type="button" class="btn btn-primary px-4 rounded-pill" data-bs-dismiss="modal" id="btnConfirmOk">I Agree</button>
+        `;
+        
+        const modalEl = document.getElementById('customModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        
+        document.getElementById('btnConfirmOk').onclick = () => resolve(true);
+        document.getElementById('btnConfirmCancel').onclick = () => resolve(false);
+        
+        // If they click outside the box to close it, treat it as a "Cancel"
+        modalEl.addEventListener('hidden.bs.modal', function handler() {
+            resolve(false);
+            modalEl.removeEventListener('hidden.bs.modal', handler);
+        }, { once: true });
+
+        modal.show();
+    });
+}
 
 
 
@@ -700,12 +741,12 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
     activeRequestId = requestId; 
     activeRouteIndex = passengerRouteIndex; // Save it to memory!
 
-    // ✅ FIX: Only show the popup if we aren't skipping it
+   // ✅ FIX: Uses the sleek Bootstrap modal instead of the ugly native confirm box!
     if (!skipConfirm) {
         const agreementMessage = `Do you agree to help the passenger with embarkation at ${embarkName} and disembarkation at ${destName}?`;
-        if (!confirm(agreementMessage)) return; 
+        const isConfirmed = await customConfirm(agreementMessage); 
+        if (!isConfirmed) return; 
     }
-
     try {
         // ... (Leave the rest of your fetch(API_URL) code exactly as it is)
         const res = await fetch(API_URL, {

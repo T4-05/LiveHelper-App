@@ -1,192 +1,223 @@
-/* * LiveHelper Custom Styles 
- * Note: We are relying heavily on Bootstrap for buttons, cards, and forms.
- * This file just handles the custom app layout, animations, and the Uber-style popup.
- */
-
-/* Pulling in the Inter font for a cleaner, modern look */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+/* Pulling in 'Nunito' for a super friendly, rounded, approachable look */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
 * {
     box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent; /* Stops that annoying blue flash when tapping buttons on mobile */
+    -webkit-tap-highlight-color: transparent; 
 }
 
-/* Making the web page behave like a fullscreen mobile app */
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: #b7c2f0; 
+    font-family: 'Nunito', sans-serif;
+    /* ✅ NEW: Soft pink-to-blue gradient instead of boring gray */
+    background: linear-gradient(135deg, #f0f4ff 0%, #fdf4ff 100%); 
+    color: #1e293b;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden; /* Locks the body so only the main content area scrolls */
+    overflow: hidden; 
 }
 
-/* The scrollable area where all our screens live */
+/* Modern App Header */
+.top-header {
+    background: rgba(255, 255, 255, 0.85); /* ✅ FIX: Frosted glass white background */
+    backdrop-filter: blur(12px);
+    position: fixed; /* ✅ FIX: Keeps the header locked at the top when you scroll */
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+.top-header .navbar-brand {
+    color: #4f46e5 !important; /* ✅ FIX: Premium Indigo color so the logo pops */
+    text-shadow: none;
+}
+
+.top-header .btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #9333ea); /* ✅ FIX: Vibrant purple gradient */
+    border: none;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+}
 main {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 100px; /* Keeps the bottom content from hiding behind the nav bar */
+    padding-bottom: 120px; /* Room for floating nav */
 }
 
-/* The colorful top banner on the home screen */
+/* Vibrant, Energetic Hero Gradient */
 .hero-section {
-    background: linear-gradient(135deg, #e4079a, #0dcaf0); 
-    color: rgb(245, 234, 234); 
-    border-radius: 0 0 20px 20px; 
-    padding: 40px 20px; 
+    background: linear-gradient(135deg, #4f46e5, #9333ea, #ec4899);
+    background-size: 200% 200%;
+    animation: gradientShift 10s ease infinite;
+    color: white; 
+    border-radius: 0 0 40px 40px; 
+    padding: 80px 20px 60px 20px; 
     text-align: center; 
-    margin-bottom: 20px; 
+    box-shadow: 0 10px 30px rgba(147, 51, 234, 0.3);
+    margin-bottom: -30px;
 }
 
-/* Handling how we show and hide screens (Login vs Passenger vs Volunteer) */
-.screen {
-    display: none; /* Hide all screens by default */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-.active-screen {
-    display: block; /* Only show the one with this class */
-    animation: fadeUp 0.4s ease; /* A smooth little slide-up effect when changing screens */
+.screen { display: none; }
+.active-screen { 
+    display: block; 
+    animation: fadeScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes fadeScale {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* The navigation bar fixed at the bottom of the phone */
+/* 🚀 PREMIUM THEMED FLOATING NAV (Desktop Safe!) */
 .bottom-nav {
     position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: rgb(228, 208, 250); 
-    border-top: 1px solid #e3dee6; 
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-width: 450px; /* Keeps it perfectly sized on desktops! */
+    background: #1e1b4b; /* Deep premium indigo */
+    border-radius: 40px;
+    box-shadow: 0 15px 35px rgba(30, 27, 75, 0.3), 0 5px 15px rgba(0,0,0,0.2);
     z-index: 1000; 
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bottom-nav .nav-link {
-    color: #137ad4; 
-    font-size: 0.8rem; 
+    color: #818cf8; /* Soft glowing purple for inactive icons */
+    font-size: 0.75rem; 
+    font-weight: 700;
     cursor: pointer; 
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 30px;
+    padding: 10px 12px;
+}
+
+.bottom-nav .nav-link:hover {
+    color: #c7d2fe;
 }
 
 .bottom-nav .nav-link.active {
-    color: #0d6efd; 
-    font-weight: bold;
+    color: white; 
+    background: linear-gradient(135deg, #ec4899, #9333ea); /* Punchy Pink/Purple */
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
 }
 
 .bottom-nav .nav-link i {
-    font-size: 1.5rem; 
+    font-size: 1.4rem; 
     display: block; 
-    margin-bottom: 2px; 
+    margin-bottom: 3px; 
 }
 
-/* ----------------------------------------------------
-   The slide-up 'Connecting...' card (Uber style)
-   ---------------------------------------------------- */
+.bottom-nav .nav-link.active i {
+    transform: scale(1.15) translateY(-2px); /* Makes the active icon pop up */
+}
 
+/* Beautiful Bouncy Cards */
+.card {
+    border-radius: 24px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.03) !important;
+    border: none !important;
+    background: #ffffff;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+
+.card:active {
+    transform: scale(0.96);
+}
+
+/* Colorful Action Cards for the Home Screen */
+.card-help {
+    background: linear-gradient(135deg, #fff1f2, #fce7f3) !important;
+    border: 2px solid #fbcfe8 !important;
+}
+.card-help .icon-box {
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    color: white;
+    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.3);
+}
+.card-help h5 { color: #be123c !important; }
+
+.card-vol {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+    border: 2px solid #a7f3d0 !important;
+}
+.card-vol .icon-box {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+.card-vol h5 { color: #047857 !important; }
+
+/* Friendly Chunky Buttons */
+.btn {
+    border-radius: 50px; /* Pill shape */
+    font-weight: 800;
+    padding: 0.85rem 1.5rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #ec4899);
+    border: none;
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.3);
+}
+
+.btn-primary:hover, .btn-primary:active {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(236, 72, 153, 0.4);
+    background: linear-gradient(135deg, #4338ca, #db2777);
+}
+
+/* Floating Input Fields */
+.form-control, .form-select, .input-group-text {
+    border-radius: 16px;
+    border: 2px solid #e2e8f0;
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #334155;
+    background-color: #f8fafc;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #9333ea;
+    box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.15);
+    background-color: #ffffff;
+}
+
+/* Uber-style Popup */
 .connecting-card {
-    display: none; /* Hidden until they click 'Confirm Route' */
+    display: none; 
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: white;
-    border-radius: 20px 20px 0 0;
-    padding: 25px 20px 40px 20px; /* Extra padding at the bottom for phone swipe bars */
-    box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
-    z-index: 9999; /* Make sure this sits on top of the map */
-    animation: slideUp 0.3s ease-out;
+    background: #ffffff;
+    border-radius: 30px 30px 0 0;
+    padding: 30px 20px 40px 20px; 
+    box-shadow: 0 -15px 40px rgba(0,0,0,0.15);
+    z-index: 9999; 
+    animation: slideUpBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes slideUp {
+@keyframes slideUpBounce {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
-}
-
-.connecting-header h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1f2937;
-}
-
-.connecting-header p {
-    margin: 5px 0 15px 0;
-    color: #6b7280;
-    font-size: 0.9rem;
-}
-
-/* That cool animated blue loading line */
-.progress-container {
-    width: 100%;
-    height: 4px;
-    background-color: #e5e7eb;
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    position: relative;
-}
-
-.progress-bar {
-    width: 30%;
-    height: 100%;
-    background-color: #0d6efd; 
-    position: absolute;
-    border-radius: 2px;
-    animation: loadingBar 2s infinite ease-in-out;
-}
-
-@keyframes loadingBar {
-    0% { left: -30%; }
-    50% { left: 40%; width: 50%; }
-    100% { left: 100%; width: 30%; }
-}
-
-/* The little location preview box inside the popup */
-.request-preview {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: #f9fafb;
-    padding: 15px;
-    border-radius: 12px;
-}
-
-.preview-icon {
-    width: 40px;
-    height: 40px;
-    background: #eff6ff;
-    color: #0d6efd;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-}
-
-.preview-text {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.preview-text strong { 
-    font-size: 0.95rem; 
-    color: #1f2937; 
-}
-
-.preview-text span { 
-    font-size: 0.85rem; 
-    color: #6b7280; 
-}
-
-/* The red cancel button */
-.cancel-btn {
-    background: none;
-    border: none;
-    color: #dc3545;
-    font-weight: 600;
-    cursor: pointer;
 }
