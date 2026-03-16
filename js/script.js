@@ -542,6 +542,7 @@ function getGPS() {
     display.value = "Locating...";
     
     if (navigator.geolocation) {
+        // ✅ FIX: Added enableHighAccuracy to force real GPS instead of Wi-Fi guessing
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const lat = pos.coords.latitude;
@@ -559,38 +560,53 @@ function getGPS() {
             },
             (error) => { 
                 console.log("GPS Error:", error);
-                display.value = "GPS Error (Using Default)"; 
-                userCoords = { lat: 51.505, lng: -0.09 }; 
-            }
+                display.value = ""; 
+                alert("Could not find your location automatically. Please type it in.");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
-        display.value = "Location not supported";
+        alert("Location not supported by this browser.");
     }
 }
-
 const reqForm = document.getElementById('requestForm');
 if(reqForm) {
     reqForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        if (!userCoords) {
-            alert("Please click the target button to get your location first!");
+        const embarkVal = document.getElementById('locationDisplay').value.trim();
+        const dest = document.getElementById('destination').value;
+
+        if (!embarkVal) {
+            alert("Please enter a starting location or tap the GPS target button.");
             return;
         }
 
-        const dest = document.getElementById('destination').value;
-        
-        try {
+        const processRequest = () => {
             document.getElementById('requestForm').style.display = 'none';
             document.getElementById('map-container').style.display = 'block';
             initGoogleMap(userCoords.lat, userCoords.lng, dest);
-        } catch (err) {
-            console.error("Error:", err);
-            document.getElementById('requestForm').style.display = 'block';
+        };
+
+        // ✅ FIX: If they typed an address manually, convert it to coordinates first!
+        if (!userCoords) {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: embarkVal + ", London, UK", bounds: new google.maps.LatLngBounds(
+                new google.maps.LatLng(51.286760, -0.510375), new google.maps.LatLng(51.691874, 0.334015)
+            )}, (results, status) => {
+                if (status === "OK" && results[0]) {
+                    userCoords = { lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng() };
+                    document.getElementById('locationDisplay').value = results[0].formatted_address;
+                    processRequest();
+                } else {
+                    alert("Could not find that starting location. Please select it from the dropdown or use the GPS button.");
+                }
+            });
+        } else {
+            processRequest();
         }
     });
 }
-
 async function confirmSelection() {
     const overlay = document.getElementById('connecting-overlay');
     
@@ -896,20 +912,33 @@ function initGoogleMap(userLat, userLng, destinationText) {
 }
 window.onload = function() {
     const destInput = document.getElementById('destination');
-    if (destInput && google) {
-        
-        // 1. Define the invisible GPS box around Greater London
+    const startInput = document.getElementById('locationDisplay'); // ✅ NEW
+    
+    if (google) {
         const londonBounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(51.286760, -0.510375), // South-West Corner (Surrey/Berkshire border)
-            new google.maps.LatLng(51.691874, 0.334015)   // North-East Corner (Essex border)
+            new google.maps.LatLng(51.286760, -0.510375), // South-West Corner
+            new google.maps.LatLng(51.691874, 0.334015)   // North-East Corner
         );
 
-        new google.maps.places.Autocomplete(destInput, {
+        const autocompleteOptions = {
             bounds: londonBounds,
-            strictBounds: true, // ✅ FIX: Forces Google to ONLY show results inside the London box!
+            strictBounds: true, 
             fields: ["formatted_address", "geometry", "name"],
             componentRestrictions: { country: "GB" } 
-        });
+        };
+
+        if (destInput) new google.maps.places.Autocomplete(destInput, autocompleteOptions);
+
+        // ✅ FIX: Add Autocomplete to the start location so they can search for stations!
+        if (startInput) {
+            const startAutocomplete = new google.maps.places.Autocomplete(startInput, autocompleteOptions);
+            startAutocomplete.addListener('place_changed', () => {
+                const place = startAutocomplete.getPlace();
+                if (place.geometry) {
+                    userCoords = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
+                }
+            });
+        }
     }
 };
 // Awards points to the Volunteer!
@@ -971,6 +1000,11 @@ function loadProfile() {
     document.getElementById('profile-name').innerText = currentUserName;
     document.getElementById('profile-role').innerText = currentUserRole.toUpperCase();
     
+    // ✅ FIX: Dynamically update the avatar to use their REAL initials!
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=eff6ff&color=2563eb&size=100&rounded=true`;
+    document.getElementById('profile-avatar').src = avatarUrl;
+    
+    
     // Only show credits & rating if they are a volunteer
     if (currentUserRole === 'volunteer') {
         document.getElementById('volunteer-stats').style.display = 'block';
@@ -992,6 +1026,54 @@ function loadProfile() {
     document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
     // Make the profile button active (it's the 4th button in the nav)
     document.querySelectorAll('.bottom-nav .nav-link')[3].classList.add('active');
+}
+
+// Opens the settings screen and pre-fills the form
+function openSettings() {
+    document.getElementById('settingsEmail').value = document.getElementById('email').value || "";
+    document.getElementById('settingsName').value = currentUserName || "";
+    document.getElementById('settingsPassword').value = ""; // Always blank for security
+    
+    showScreen('screen-settings');
+}
+
+// Saves the changes to AWS
+async function saveSettings(e) {
+    e.preventDefault();
+    const btn = document.getElementById('settingsSaveBtn');
+    btn.innerHTML = 'Saving... <div class="spinner-border spinner-border-sm ms-2"></div>';
+    btn.disabled = true;
+
+    const newName = document.getElementById('settingsName').value.trim();
+    const newPhone = document.getElementById('settingsPhone').value.trim();
+    const newPassword = document.getElementById('settingsPassword').value;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'update_profile',
+                email: document.getElementById('settingsEmail').value,
+                name: newName,
+                phone: newPhone,
+                password: newPassword // Can be empty
+            })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            currentUserName = newName; // Update local memory
+            alert("Profile updated successfully!");
+            loadProfile(); // Send them back to the profile screen
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch (err) {
+        alert("Could not connect to server.");
+    } finally {
+        btn.innerHTML = 'Save Changes';
+        btn.disabled = false;
+    }
 }
 
 // ==========================================

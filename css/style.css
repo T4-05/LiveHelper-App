@@ -1,4 +1,3 @@
-/* Pulling in 'Nunito' for a super friendly, rounded, approachable look */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
 * {
@@ -8,8 +7,7 @@
 
 body {
     font-family: 'Nunito', sans-serif;
-    /* ✅ NEW: Soft pink-to-blue gradient instead of boring gray */
-    background: linear-gradient(135deg, #f0f4ff 0%, #fdf4ff 100%); 
+    background: #f4f7f6; /* ✅ Clean, flat off-white */
     color: #1e293b;
     margin: 0;
     padding: 0;
@@ -21,99 +19,88 @@ body {
 
 /* Modern App Header */
 .top-header {
-    background: rgba(255, 255, 255, 0.85); /* ✅ FIX: Frosted glass white background */
-    backdrop-filter: blur(12px);
-    position: fixed; /* ✅ FIX: Keeps the header locked at the top when you scroll */
+    background: #ffffff; 
+    position: fixed; 
     top: 0;
     width: 100%;
     z-index: 1000;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .top-header .navbar-brand {
-    color: #4f46e5 !important; /* ✅ FIX: Premium Indigo color so the logo pops */
+    color: #2563eb !important; /* Flat Corporate Blue */
     text-shadow: none;
 }
 
 .top-header .btn-primary {
-    background: linear-gradient(135deg, #4f46e5, #9333ea); /* ✅ FIX: Vibrant purple gradient */
+    background: #2563eb; /* Flat Blue */
     border: none;
     color: white;
     font-weight: bold;
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+    box-shadow: none;
 }
+
 main {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 120px; /* Room for floating nav */
+    padding-bottom: 120px; 
 }
 
-/* Vibrant, Energetic Hero Gradient */
+/* ✅ FLAT, CLEAN HERO BANNER */
 .hero-section {
-    background: linear-gradient(135deg, #4f46e5, #9333ea, #ec4899);
-    background-size: 200% 200%;
-    animation: gradientShift 10s ease infinite;
+    background: #2563eb;
     color: white; 
-    border-radius: 0 0 40px 40px; 
-    padding: 80px 20px 60px 20px; 
-    text-align: center; 
-    box-shadow: 0 10px 30px rgba(147, 51, 234, 0.3);
-    margin-bottom: -30px;
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    border-radius: 0; /* Flat, no curves */
+    padding: 85px 20px 25px 20px; /* Pushes content safely below the header */
+    text-align: left; 
+    box-shadow: none;
+    margin-bottom: 20px; /* Natural spacing, no more overlap hacks */
 }
 
 .screen { display: none; }
 .active-screen { 
     display: block; 
-    animation: fadeScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    animation: fadeScale 0.2s ease-out; 
 }
 
 @keyframes fadeScale {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* 🚀 PREMIUM THEMED FLOATING NAV (Desktop Safe!) */
+/* FLOATING BOTTOM NAV */
 .bottom-nav {
     position: fixed;
     bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
     width: 92%;
-    max-width: 450px; /* Keeps it perfectly sized on desktops! */
-    background: #1e1b4b; /* Deep premium indigo */
+    max-width: 450px; 
+    background: #1e293b; /* Clean Dark Slate */
     border-radius: 40px;
-    box-shadow: 0 15px 35px rgba(30, 27, 75, 0.3), 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     z-index: 1000; 
     padding: 8px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
 }
 
 .bottom-nav .nav-link {
-    color: #818cf8; /* Soft glowing purple for inactive icons */
+    color: #94a3b8; 
     font-size: 0.75rem; 
     font-weight: 700;
     cursor: pointer; 
     text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.2s ease;
     border-radius: 30px;
     padding: 10px 12px;
 }
 
-.bottom-nav .nav-link:hover {
-    color: #c7d2fe;
-}
+.bottom-nav .nav-link:hover { color: #cbd5e1; }
 
 .bottom-nav .nav-link.active {
     color: white; 
-    background: linear-gradient(135deg, #ec4899, #9333ea); /* Punchy Pink/Purple */
-    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+    background: #2563eb; /* Solid Flat Blue */
+    box-shadow: none;
 }
 
 .bottom-nav .nav-link i {
@@ -123,71 +110,67 @@ main {
 }
 
 .bottom-nav .nav-link.active i {
-    transform: scale(1.15) translateY(-2px); /* Makes the active icon pop up */
+    transform: translateY(-2px); 
 }
 
-/* Beautiful Bouncy Cards */
+/* Beautiful Solid Cards */
 .card {
-    border-radius: 24px !important;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.03) !important;
-    border: none !important;
+    border-radius: 16px !important; /* Less bubbly */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
+    border: 1px solid #e2e8f0 !important;
     background: #ffffff;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease; 
 }
 
-.card:active {
-    transform: scale(0.96);
+.card[onclick]:active {
+    transform: scale(0.97);
 }
 
-/* Colorful Action Cards for the Home Screen */
+/* ✅ FLAT Action Cards for the Home Screen */
 .card-help {
-    background: linear-gradient(135deg, #fff1f2, #fce7f3) !important;
-    border: 2px solid #fbcfe8 !important;
+    background: #eff6ff !important;
+    border: 2px solid #bfdbfe !important;
 }
 .card-help .icon-box {
-    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    background: #3b82f6;
     color: white;
-    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.3);
 }
-.card-help h5 { color: #be123c !important; }
+.card-help h5 { color: #1e40af !important; }
 
 .card-vol {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
-    border: 2px solid #a7f3d0 !important;
+    background: #f0fdf4 !important;
+    border: 2px solid #bbf7d0 !important;
 }
 .card-vol .icon-box {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #22c55e;
     color: white;
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
 }
-.card-vol h5 { color: #047857 !important; }
+.card-vol h5 { color: #166534 !important; }
 
-/* Friendly Chunky Buttons */
+/* Clean Flat Buttons */
 .btn {
-    border-radius: 50px; /* Pill shape */
-    font-weight: 800;
+    border-radius: 12px; /* Professional curve */
+    font-weight: 700;
     padding: 0.85rem 1.5rem;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.2s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-size: 0.9rem;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #4f46e5, #ec4899);
+    background: #2563eb;
     border: none;
-    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.3);
+    box-shadow: none;
 }
 
 .btn-primary:hover, .btn-primary:active {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(236, 72, 153, 0.4);
-    background: linear-gradient(135deg, #4338ca, #db2777);
+    background: #1d4ed8;
 }
 
-/* Floating Input Fields */
+/* Input Fields */
 .form-control, .form-select, .input-group-text {
-    border-radius: 16px;
+    border-radius: 12px;
     border: 2px solid #e2e8f0;
     padding: 0.85rem 1rem;
     font-size: 1rem;
@@ -197,8 +180,8 @@ main {
 }
 
 .form-control:focus, .form-select:focus {
-    border-color: #9333ea;
-    box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.15);
+    border-color: #2563eb;
+    box-shadow: none;
     background-color: #ffffff;
 }
 
@@ -210,14 +193,9 @@ main {
     left: 0;
     width: 100%;
     background: #ffffff;
-    border-radius: 30px 30px 0 0;
+    border-radius: 24px 24px 0 0;
     padding: 30px 20px 40px 20px; 
-    box-shadow: 0 -15px 40px rgba(0,0,0,0.15);
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
     z-index: 9999; 
-    animation: slideUpBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes slideUpBounce {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+    border-top: 1px solid #e2e8f0;
 }
