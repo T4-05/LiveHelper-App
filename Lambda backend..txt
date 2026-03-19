@@ -1,0 +1,266 @@
+Lambda backend.
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, ScanCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
+
+const USERS_TABLE = "LiveHelper_Users";
+const REQUESTS_TABLE = "LiveHelper_Requests";
+
+export const handler = async (event) => {
+    // Note: We are letting the AWS Function URL handle CORS automatically! No manual headers needed.
+
+    try {
+        // ✅ SAFELY PARSE THE DATA
+        let body = {};
+        if (event.body) {
+            body = event.isBase64Encoded ? JSON.parse(Buffer.from(event.body, 'base64').toString('utf8')) : JSON.parse(event.body);
+        } else {
+            return { statusCode: 400, body: JSON.stringify({ error: "Empty request" }) };
+        }
+        
+        const action = body.action;
+
+        // ==========================================
+        // 1. AUTHENTICATION & PROFILE SETTINGS
+        // ==========================================
+        if (action === 'signup') {
+            await docClient.send(new PutCommand({
+                TableName: USERS_TABLE,
+                Item: {
+                    email: body.email,
+                    password: body.password,
+                    name: body.name,
+                    phone: body.phone,
+                    role: body.role,
+                    credits: 0,
+                    ratingSum: 0,
+                    ratingCount: 0
+                }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true, name: body.name, role: body.role }) };
+        }
+
+        if (action === 'login') {
+            const result = await docClient.send(new GetCommand({
+                TableName: USERS_TABLE,
+                Key: { email: body.email }
+            }));
+            
+            if (result.Item && result.Item.password === body.password) {
+                return { 
+                    statusCode: 200, 
+                    body: JSON.stringify({ 
+                        success: true, 
+                        name: result.Item.name, 
+                        role: result.Item.role,
+                        credits: result.Item.credits || 0,
+                        ratingSum: result.Item.ratingSum || 0,
+                        ratingCount: result.Item.ratingCount || 0
+                    }) 
+                };
+            } else {
+                return { statusCode: 401, body: JSON.stringify({ success: false, error: "Invalid credentials" }) };
+            }
+        }
+
+        if (action === 'update_profile') {
+            let updateExp = "set #n = :name, phone = :phone";
+            let expNames = { "#n": "name" };
+            let expValues = { ":name": body.name, ":phone": body.phone };
+
+            if (body.password && body.password.trim() !== "") {
+                updateExp += ", password = :password";
+                expValues[":password"] = body.password;
+            }
+
+            await docClient.send(new UpdateCommand({
+                TableName: USERS_TABLE,
+                Key: { email: body.email },
+                UpdateExpression: updateExp,
+                ExpressionAttributeNames: expNames,
+                ExpressionAttributeValues: expValues
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        // ==========================================
+        // 2. PASSENGER ACTIONS
+        // ==========================================
+        if (action === 'request_help') {
+            await docClient.send(new PutCommand({
+                TableName: REQUESTS_TABLE,
+                Item: {
+                    passengerEmail: body.email,
+                    passengerName: body.name,
+                    embarkation: body.embarkation || "Unknown Location",
+                    destination: body.destination || "Unknown Location",
+                    timeWindow: body.timeWindow,
+                    helpType: body.helpType,
+                    lat: body.lat || 51.5074, 
+                    lng: body.lng || -0.1278,
+                    status: 'pending',
+                    timestamp: Date.now()
+                }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        if (action === 'check_active_request') {
+            const result = await docClient.send(new GetCommand({
+                TableName: REQUESTS_TABLE,
+                Key: { passengerEmail: body.email }
+            }));
+            
+            if (result.Item) {
+                return { statusCode: 200, body: JSON.stringify({ success: true, request: result.Item }) };
+            }
+            return { statusCode: 200, body: JSON.stringify({ success: false }) };
+        }
+
+        if (action === 'cancel_request') {
+            await docClient.send(new DeleteCommand({
+                TableName: REQUESTS_TABLE,
+                Key: { passengerEmail: body.email }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        if (action === 'submit_rating') {
+            const volResult = await docClient.send(new GetCommand({
+                TableName: USERS_TABLE,
+                Key: { email: body.volunteerEmail }
+            }));
+            
+            if (volResult.Item) {
+                await docClient.send(new UpdateCommand({
+                    TableName: USERS_TABLE,
+                    Key: { email: body.volunteerEmail },
+                    UpdateExpression: "set ratingSum = ratingSum + :r, ratingCount = ratingCount + :inc",
+                    ExpressionAttributeValues: { ":r": body.rating, ":inc": 1 }
+                }));
+            }
+            
+            await docClient.send(new DeleteCommand({
+                TableName: REQUESTS_TABLE,
+                Key: { passengerEmail: body.email }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        // ==========================================
+        // 3. VOLUNTEER ACTIONS
+        // ==========================================
+        if (action === 'get_volunteer_feed') {
+            const result = await docClient.send(new ScanCommand({
+                TableName: REQUESTS_TABLE,
+                FilterExpression: "#st = :status",
+                ExpressionAttributeNames: { "#st": "status" },
+                ExpressionAttributeValues: { ":status": "pending" }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true, requests: result.Items || [] }) };
+        }
+
+        if (action === 'accept_request') {
+            await docClient.send(new UpdateCommand({
+                TableName: REQUESTS_TABLE,
+                Key: { passengerEmail: body.passengerEmail },
+                UpdateExpression: "set #st = :acc, volunteerEmail = :vol, volunteerName = :volName",
+                ExpressionAttributeNames: { "#st": "status" },
+                ExpressionAttributeValues: { 
+                    ":acc": "accepted",
+                    ":vol": body.volunteerEmail,
+                    ":volName": body.volunteerName
+                }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        if (action === 'complete_job') {
+            await docClient.send(new UpdateCommand({
+                TableName: REQUESTS_TABLE,
+                Key: { passengerEmail: body.passengerEmail },
+                UpdateExpression: "set #st = :done",
+                ExpressionAttributeNames: { "#st": "status" },
+                ExpressionAttributeValues: { ":done": "completed" }
+            }));
+            
+            await docClient.send(new UpdateCommand({
+                TableName: USERS_TABLE,
+                Key: { email: body.volunteerEmail },
+                UpdateExpression: "set credits = credits + :c",
+                ExpressionAttributeValues: { ":c": 10 }
+            }));
+            return { statusCode: 200, body: JSON.stringify({ success: true }) };
+        }
+
+        return { statusCode: 400, body: JSON.stringify({ error: "Unknown action: " + action }) };
+
+    } catch (err) {
+        console.error(err);
+        return { statusCode: 500, body: JSON.stringify({ success: false, error: err.message }) };
+    }
+};
+
+
+
+
+
+Lambda websocket
+
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, DeleteCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+
+const dbClient = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(dbClient);
+const CONNECTIONS_TABLE = "LiveHelper_Connections";
+
+export const handler = async (event) => {
+    const routeKey = event.requestContext.routeKey;
+    const connectionId = event.requestContext.connectionId;
+
+    try {
+        // 1. User opens the map
+        if (routeKey === "$connect") {
+            await docClient.send(new PutCommand({ TableName: CONNECTIONS_TABLE, Item: { connectionId } }));
+            return { statusCode: 200, body: "Connected" };
+        }
+
+        // 2. User closes the map
+        if (routeKey === "$disconnect") {
+            await docClient.send(new DeleteCommand({ TableName: CONNECTIONS_TABLE, Key: { connectionId } }));
+            return { statusCode: 200, body: "Disconnected" };
+        }
+
+        // 3. User sends a GPS update! Broadcast it to the other person.
+        if (routeKey === "sync_location" || routeKey === "$default") {
+            const domain = event.requestContext.domainName;
+            const stage = event.requestContext.stage;
+            const apiGtw = new ApiGatewayManagementApiClient({ endpoint: `https://${domain}/${stage}` });
+
+            // Get everyone currently looking at the map
+            const connections = await docClient.send(new ScanCommand({ TableName: CONNECTIONS_TABLE }));
+            
+            // Send the GPS data to everyone EXCEPT the person who just sent it
+            const postCalls = connections.Items.map(async ({ connectionId: id }) => {
+                if (id !== connectionId) {
+                    try {
+                        await apiGtw.send(new PostToConnectionCommand({ ConnectionId: id, Data: event.body }));
+                    } catch (e) {
+                        if (e.statusCode === 410) { // If they left, delete them from DB
+                            await docClient.send(new DeleteCommand({ TableName: CONNECTIONS_TABLE, Key: { connectionId: id } }));
+                        }
+                    }
+                }
+            });
+            await Promise.all(postCalls);
+            return { statusCode: 200, body: "Location Synced" };
+        }
+    } catch (err) {
+        console.error(err);
+        return { statusCode: 500, body: "Error" };
+    }
+    return { statusCode: 200 };
+};

@@ -1,8 +1,9 @@
 // ✅ REST API (For Login/Database)
-const API_URL = 'https://zsc77qfohvxqopbuznvxnesa3a0cjudo.lambda-url.us-east-1.on.aws/';
+// ✅ REST API (For Login/Database)
+const API_URL = 'https://7cgcgrivhhqbo3mnbcvv3tftwm0deicc.lambda-url.eu-north-1.on.aws/';
 
 // ✅ NEW: WEBSOCKET API (For Live GPS Tracking)
-const WS_URL = 'wss://25j6a7ib12.execute-api.us-east-1.amazonaws.com/production/';
+const WS_URL = 'wss://6hir0irra5.execute-api.eu-north-1.amazonaws.com/production/';
 
 // GLOBAL STATE
 let isLoggedIn = false;
@@ -350,22 +351,36 @@ function updateUIVisibility() {
 // ==========================================
 
 function showScreen(screenId) {
+    // 1. Hide all screens and show the target screen
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
     const target = document.getElementById(screenId);
     if(target) target.classList.add('active-screen');
+
+    // ✅ THE FIX: Automatically move the blue highlight on the bottom nav bar!
+    const bottomNavs = document.querySelectorAll('.bottom-nav .nav-link');
+    if (bottomNavs.length > 0) {
+        bottomNavs.forEach(nav => nav.classList.remove('active')); // Clear old highlights
+        
+        if (screenId === 'screen-home') bottomNavs[0].classList.add('active');
+        else if (screenId === 'screen-passenger') bottomNavs[1].classList.add('active');
+        else if (screenId === 'screen-volunteer') bottomNavs[2].classList.add('active');
+        else if (screenId === 'screen-profile' || screenId === 'screen-settings') bottomNavs[3].classList.add('active');
+    }
 }
 
-function handleActionClick(targetRole) {
-    if (isLoggedIn) {
-        if (currentUserRole !== targetRole) {
-            alert(`Access Denied.\n\nYou are logged in as a ${currentUserRole.toUpperCase()}.`);
-            return;
-        }
-        if (targetRole === 'passenger') showScreen('screen-passenger');
-        else { showScreen('screen-volunteer'); loadVolunteerFeed(); }
+function handleActionClick(role) {
+    if (!isLoggedIn) {
+        // If they aren't logged in, send them to login and select the right tab!
+        goToLogin();
+        switchLoginTab(role);
     } else {
-        showScreen('screen-login');
-        switchLoginTab(targetRole);
+        // If they are logged in, send them straight to their dashboard!
+        if (role === 'passenger') {
+            showScreen('screen-passenger');
+        } else {
+            showScreen('screen-volunteer');
+            loadVolunteerFeed();
+        }
     }
 }
 
@@ -609,9 +624,8 @@ if(reqForm) {
 }
 async function confirmSelection() {
     const overlay = document.getElementById('connecting-overlay');
-    
-    // ✅ BUG FIX: Wipe the old volunteer offers and put the spinner back!
     const offersList = document.getElementById('volunteer-offers-list');
+    
     if (offersList) {
         offersList.innerHTML = '<div class="text-center text-muted small spinner-border mx-auto" role="status"></div>';
     }
@@ -621,45 +635,50 @@ async function confirmSelection() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    const embarkation = document.getElementById('locationDisplay').value;
-    // ... the rest of the function stays exactly the same
-    const dest = document.getElementById('destination').value;
-    const timeWindow = document.getElementById('timeWindow').value;
-    
-    const previewDest = document.getElementById('preview-dest');
-    if(previewDest) previewDest.innerText = dest;
-try {
-        // ✅ FIX: Added 'const response =' to capture the reply from AWS
+    const embarkation = document.getElementById('locationDisplay').value || "Current Location";
+    const dest = document.getElementById('destination').value || "Anywhere";
+    const timeWindow = document.getElementById('timeWindow') ? document.getElementById('timeWindow').value : "ASAP";
+    const hType = document.getElementById('helpType') ? document.getElementById('helpType').value : "General";
+
+    const finalLat = userCoords ? userCoords.lat : 51.5074; 
+    const finalLng = userCoords ? userCoords.lng : -0.1278;
+
+    try {
+        console.log("Sending Request to AWS...");
         const response = await fetch(API_URL, {
             method: 'POST',
+            // ✅ THE FIX: This tells AWS that we are sending JSON data!
+            headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({
                 action: 'request_help', 
                 email: document.getElementById('email').value || "Guest",
+                name: currentUserName, 
                 embarkation: embarkation, 
                 destination: dest,        
                 timeWindow: timeWindow,   
-                helpType: document.getElementById('helpType').value,
-                lat: userCoords.lat,
-                lng: userCoords.lng
+                helpType: hType,
+                lat: finalLat,
+                lng: finalLng
             })
         });
         
-       // ✅ FIX: Read the response and save the ID globally so we can cancel it later!
         const data = await response.json(); 
+        console.log("AWS Response:", data);
+
         if (data.success) {
-            activeRequestId = data.requestId; 
-            
-            // 🚀 NEW: Tell all volunteers to refresh their screens instantly to see the new request!
+            activeRequestId = document.getElementById('email').value; 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
             }
+            startBroadcastingGPS();
+        } else {
+            alert("AWS Error: " + data.error);
+            if (overlay) overlay.style.display = 'none';
         }
-        
-        // START SHARING GPS SO VOLUNTEER CAN FIND THEM
-        startBroadcastingGPS();
-
     } catch(err) {
         console.error("AWS Save Error:", err);
+        alert("Connection blocked. Check F12 Console for details.");
+        if (overlay) overlay.style.display = 'none';
     }
 }
 
@@ -670,38 +689,44 @@ async function cancelRequest() {
     document.getElementById('screen-passenger-tracking').style.display = 'none'; 
     document.getElementById('requestForm').style.display = 'block';
     
-    // Stop sharing GPS
+    // Stop sharing GPS locally
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
     
-   if (activeRequestId) {
+    if (activeRequestId) {
         try {
             // 1. MUST use 'await' so the database finishes cancelling BEFORE moving on!
             await fetch(API_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'cancel_request', requestId: activeRequestId })
+                headers: { 'Content-Type': 'application/json' }, // ✅ FIX 1: Added CORS Header!
+                body: JSON.stringify({ 
+                    action: 'cancel_request', 
+                    email: activeRequestId // ✅ FIX 2: Matched exactly to what AWS expects
+                })
             });
             
             activeRequestId = null; // Clear it from memory
             
             // 2. NOW it is safe to tell the volunteers to refresh their screens!
             if (ws && ws.readyState === WebSocket.OPEN) {
+                // Tell all volunteers to clear the job from their feed
                 ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
                 
-                // ✅ NEW: If a volunteer was already on the way, tell their phone to stop!
+                // ✅ Tell the SPECIFIC volunteer who is on the way to stop!
                 if (currentVolunteerEmail) {
                     ws.send(JSON.stringify({ action: 'sync_location', type: 'job_cancelled_mid_trip', role: 'passenger', email: currentVolunteerEmail, lat: 0, lng: 0 }));
                 }
             }
-        } catch (err) { console.error("Cancel Error:", err); }
+        } catch (err) { 
+            console.error("Cancel Error:", err); 
+        }
     }
     
-    currentVolunteerEmail = ""; // ✅ Clear the volunteer from memory
+    currentVolunteerEmail = ""; // Clear the volunteer from memory
     alert("Request cancelled.");
 }
 // ==========================================
 // 4. VOLUNTEER LOGIC
 // ==========================================
-
 async function loadVolunteerFeed() {
     const feed = document.getElementById('requests-feed');
     if(!feed) return;
@@ -711,14 +736,30 @@ async function loadVolunteerFeed() {
     try {
         const res = await fetch(API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'get_requests' }) 
+            body: JSON.stringify({ action: 'get_volunteer_feed' }) 
         });
         const data = await res.json();
 
-        if (data.success && data.requests && data.requests.length > 0) {
-            feed.innerHTML = data.requests.map(req => {
-                const safeDest = (req.destination || 'Unknown Location').replace(/'/g, "\\'");
-                const safeEmbark = (req.embarkation || 'Unknown Location').replace(/'/g, "\\'");
+        let validRequests = [];
+        if (data.success && data.requests) {
+            // ✅ THE ULTIMATE GHOST-BUSTER FILTER
+            // This guarantees the app ignores any broken data sitting in your database!
+            validRequests = data.requests.filter(req => {
+                const embark = req.embarkation || req.startLocation || "";
+                const dest = req.destination || "";
+                
+                return req.lat !== undefined && 
+                       req.lng !== undefined && 
+                       embark.trim() !== "" && 
+                       embark !== "Unknown Location" && 
+                       dest.trim() !== "";
+            });
+        }
+
+        if (validRequests.length > 0) {
+            feed.innerHTML = validRequests.map(req => {
+                const safeDest = req.destination.replace(/'/g, "\\'");
+                const safeEmbark = (req.embarkation || req.startLocation).replace(/'/g, "\\'");
                 const safeTime = req.timeWindow || 'ASAP';
                 const safeType = req.helpType || 'General Help';
 
@@ -726,7 +767,7 @@ async function loadVolunteerFeed() {
                 <div class="card mb-3 border-0 shadow-sm">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title fw-bold text-dark mb-0">Passenger Request</h5>
+                            <h5 class="card-title fw-bold text-dark mb-0">${req.passengerName || "Passenger"}</h5>
                             <span class="badge bg-danger">${safeTime}</span>
                         </div>
                         
@@ -736,7 +777,7 @@ async function loadVolunteerFeed() {
                         
                         <div class="d-grid">
                             <button class="btn btn-success fw-bold" 
-                                onclick="sendOffer('${req.requestId}', ${req.lat || 0}, ${req.lng || 0}, '${safeDest}', '${safeEmbark}')">
+                                onclick="sendOffer('${req.passengerEmail}', ${req.lat || 0}, ${req.lng || 0}, '${safeDest}', '${safeEmbark}')">
                                Offer to Help <i class="fa-solid fa-hand-sparkles ms-2"></i>
                             </button>
                         </div>
@@ -751,53 +792,43 @@ async function loadVolunteerFeed() {
         feed.innerHTML = `<p class="text-center text-danger">Could not connect to Cloud.</p>`;
     }
 }
-
-// ✅ FIX: Added passengerRouteIndex = 0
 async function acceptRequest(requestId, passengerLat, passengerLng, destName, embarkName, skipConfirm = false, passengerRouteIndex = 0) {
     activeRequestId = requestId; 
     activeRouteIndex = passengerRouteIndex; // Save it to memory!
 
-   // ✅ FIX: Uses the sleek Bootstrap modal instead of the ugly native confirm box!
     if (!skipConfirm) {
         const agreementMessage = `Do you agree to help the passenger with embarkation at ${embarkName} and disembarkation at ${destName}?`;
         const isConfirmed = await customConfirm(agreementMessage); 
         if (!isConfirmed) return; 
     }
+    
     try {
-        // ... (Leave the rest of your fetch(API_URL) code exactly as it is)
         const res = await fetch(API_URL, {
             method: 'POST',
             body: JSON.stringify({ 
-                action: 'accept_help',
-                requestId: requestId,
-                volunteerEmail: document.getElementById('email').value || "Unknown"
+                action: 'accept_request',
+                passengerEmail: requestId, 
+                volunteerEmail: document.getElementById('email').value || "Unknown",
+                volunteerName: currentUserName
              }) 
         });
         const data = await res.json();
 
         if (!data.success) {
-            // ✅ FIX: Tell the volunteer the job is gone and refresh the feed!
             alert("Sorry! This request was just taken by another volunteer or cancelled by the passenger.");
             loadVolunteerFeed(); 
             return;
         }
-    } catch (err) {
-         alert("Could not connect to server.");
-         return;
-    }
 
-// ... existing acceptRequest logic ...
-    try {
-        // ... previous database fetch code (AWS Lambda lock) ...
-
-        // ✅ NEW: Volunteer starts broadcasting their GPS location live!
+        // Volunteer starts broadcasting their GPS location live!
         startLiveGpsBroadcasting();
 
-    } catch (error) { // ... existing catch error ...
+    } catch (error) { 
+        alert("Could not connect to server.");
+        return;
     }
 
-
-document.getElementById('requests-feed').style.display = 'none';
+    document.getElementById('requests-feed').style.display = 'none';
     document.getElementById('volunteer-nav').style.display = 'block';
     
     // Reset buttons for a new job
@@ -853,7 +884,6 @@ document.getElementById('requests-feed').style.display = 'none';
                 }
             });
             
-            startBroadcastingGPS();
         }, () => alert("GPS Error."));
     } else {
         alert("Geolocation is not supported.");
@@ -943,32 +973,33 @@ window.onload = function() {
 };
 // Awards points to the Volunteer!
 async function completeJob() {
-    // Send API Request to award +1 Credit FIRST
     try {
         const email = document.getElementById('email').value || "Guest";
         
-        // ✅ BLAST WEBSOCKET SIGNAL TO PASSENGER
+        // 1. Blast WebSocket signal to passenger so they see the rating screen
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
-                action: 'sync_location', // Tricks our AWS route into broadcasting it
+                action: 'sync_location', 
                 type: 'job_completed',
                 role: currentUserRole,
                 volunteerEmail: email
             }));
         }
 
+        // 2. Tell AWS Database to permanently save the completed job and credits!
         await fetch(API_URL, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' }, // ✅ FIX 1: Added missing header
             body: JSON.stringify({ 
                 action: 'complete_job',
-                requestId: activeRequestId,
+                passengerEmail: activeRequestId, // ✅ FIX 2: Matched exactly what Lambda expects
                 volunteerEmail: email
              }) 
         });
         
-        // Locally increase the credit so we don't have to reload from database
-        currentUserCredits += 1;
-        alert("✅ Job Complete! You earned +1 Volunteer Credit. Thank you for your help!");
+        // ✅ FIX 3: Your AWS Database awards 10 credits per job, so we match it locally!
+        currentUserCredits += 10;
+        alert("✅ Job Complete! You earned +10 Volunteer Credits. Thank you for your help!");
         
     } catch(err) {
         console.error("Credit Error:", err);
@@ -985,7 +1016,6 @@ async function completeJob() {
     document.getElementById('requests-feed').style.display = 'block';
     loadVolunteerFeed();
 }
-
 // ==========================================
 // 6. PROFILE & CREDITS
 // ==========================================
@@ -1000,20 +1030,17 @@ function loadProfile() {
     document.getElementById('profile-name').innerText = currentUserName;
     document.getElementById('profile-role').innerText = currentUserRole.toUpperCase();
     
-    // ✅ FIX: Dynamically update the avatar to use their REAL initials!
+    // Dynamically update the avatar
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=eff6ff&color=2563eb&size=100&rounded=true`;
     document.getElementById('profile-avatar').src = avatarUrl;
-    
     
     // Only show credits & rating if they are a volunteer
     if (currentUserRole === 'volunteer') {
         document.getElementById('volunteer-stats').style.display = 'block';
         document.getElementById('profile-credits').innerText = currentUserCredits;
         
-       // ✅ NEW: Show "New" for zero trips, just like Uber!
         let avgRating = "New"; 
         if (currentUserRatingCount > 0) {
-            // Divide total stars by number of reviews, and round to 1 decimal place
             avgRating = (currentUserRatingSum / currentUserRatingCount).toFixed(1);
         }
         document.getElementById('profile-rating').innerText = avgRating;
@@ -1021,8 +1048,9 @@ function loadProfile() {
         document.getElementById('volunteer-stats').style.display = 'none';
     }
 
-    // Switch to the Profile Screen and update navbar highlighting
+    // ✅ FIX: Switch to the Profile Screen (showScreen now handles the highlighting automatically!)
     showScreen('screen-profile');
+
     document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
     // Make the profile button active (it's the 4th button in the nav)
     document.querySelectorAll('.bottom-nav .nav-link')[3].classList.add('active');
@@ -1231,14 +1259,14 @@ function imNearby() {
 }
 
 function startLiveGpsBroadcasting() {
-    // Only proceed if browser supports GPS and WebSocket is open
-    if (navigator.geolocation && ws && ws.readyState === WebSocket.OPEN) {
-        // Starts a high-accuracy GPS watch that automatically triggers when the phone moves
+    if (navigator.geolocation) {
         liveTrackingId = navigator.geolocation.watchPosition((position) => {
+            // ✅ THE FIX: Ensure AWS connection is fully open before sending GPS data
+            if (!ws || ws.readyState !== WebSocket.OPEN) return; 
+
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
-            // Broadcast GPS through your Trojan Horse Trojan hidden inside 'email'
             const packedData = JSON.stringify({
                 vEmail: document.getElementById('email').value || "Unknown",
                 vLat: lat,
@@ -1249,12 +1277,11 @@ function startLiveGpsBroadcasting() {
                 action: 'sync_location', 
                 type: 'update_location', 
                 role: 'volunteer',
-                email: packedData // Sneaking current GPS past AWS!
+                email: packedData 
             }));
         }, () => console.error("High Accuracy Geolocation access denied."), { enableHighAccuracy: true });
     }
 }
-
 
 function switchToTrackingView() {
     // 1. Swap visibility to the dedicated tracking screen
