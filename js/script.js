@@ -496,7 +496,7 @@ if(authForm) {
         }
         // ==========================================
 
-        try {
+     try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -509,21 +509,27 @@ if(authForm) {
             });
             const data = await response.json();
 
-          if (data.success) {
+            if (data.success) {
+                // SECURITY CHECK: Prevent users from logging into the wrong tab
+                if (mode === 'login' && data.role && data.role !== role) {
+                    alert("Access Denied: This email is registered as a " + data.role + ". Please switch tabs to log in.");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return; // Stop the login completely!
+                }
+
                 isLoggedIn = true;
-                currentUserRole = role; 
-                // ✅ FIX: Ensure empty names are handled properly!
+                currentUserRole = data.role || role; // Trust the database role, not the tab
+                
                 const safeName = name.trim() !== '' ? name : "New User";
                 currentUserName = mode === 'signup' ? safeName : (data.name || "New User");
                 currentUserCredits = data.credits || 0;
                 
-                // ✅ NEW: Save rating data from the database
                 currentUserRatingSum = data.ratingSum || 0; 
                 currentUserRatingCount = data.ratingCount || 0; 
                 
-                updateUIVisibility(); // ✅ Instantly hide the other role's buttons!
+                updateUIVisibility(); 
               
-                // Connect to WebSocket automatically on login
                 connectLiveTracking();
                 alert(mode === 'signup' ? "Account Created! Logged in." : "Welcome back!");
                 
@@ -533,7 +539,7 @@ if(authForm) {
                     loginBtn.setAttribute('onclick', 'logout()');
                 }
                 
-                if (role === 'passenger') showScreen('screen-passenger');
+                if (currentUserRole === 'passenger') showScreen('screen-passenger');
                 else { showScreen('screen-volunteer'); loadVolunteerFeed(); }
             } else {
                 alert("Error: " + (data.error || "Unknown error"));
@@ -542,12 +548,13 @@ if(authForm) {
             console.error(error);
             alert("Connection Error.");
         } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     });
 }
-
 // ==========================================
 // 3. PASSENGER LOGIC
 // ==========================================
