@@ -305,16 +305,16 @@ function startBroadcastingGPS() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                      action: 'sync_location',
+                     type: 'live_gps', // 
                      role: currentUserRole,
                      email: document.getElementById('email').value || "Guest",
-                      lat: pos.coords.latitude,
-                      lng: pos.coords.longitude
-}));
+                     lat: pos.coords.latitude,
+                     lng: pos.coords.longitude
+                }));
             }
         }, (err) => console.log("GPS Track Error:", err), { enableHighAccuracy: true });
     }
 }
-
 
 // ✅ NEW: Hides irrelevant buttons based on who is logged in!
 function updateUIVisibility() {
@@ -1205,7 +1205,7 @@ function sendOffer(requestId, passengerLat, passengerLng, destName, embarkName) 
         rating = (currentUserRatingSum / currentUserRatingCount).toFixed(1);
     }
 
-    // 🕵️ TROJAN HORSE: Hide our custom data inside a JSON string
+    //  TROJAN HORSE: Hide our custom data inside a JSON string
     const packedData = JSON.stringify({
         vEmail: document.getElementById('email').value || "Unknown",
         vName: currentUserName,
