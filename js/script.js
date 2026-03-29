@@ -304,12 +304,12 @@ function startBroadcastingGPS() {
         liveTrackingId = navigator.geolocation.watchPosition((pos) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
-                    action: 'sync_location',
-                    role: currentUserRole,
-                    email: document.getElementById('email').value || "Guest",
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude
-                }));
+                     action: 'sync_location',
+                     role: currentUserRole,
+                     email: document.getElementById('email').value || "Guest",
+                      lat: pos.coords.latitude,
+                      lng: pos.coords.longitude
+}));
             }
         }, (err) => console.log("GPS Track Error:", err), { enableHighAccuracy: true });
     }
