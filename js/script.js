@@ -1,41 +1,36 @@
-// ✅ REST API (For Login/Database)
-// ✅ REST API (For Login/Database)
+// api and websocket endpoints
 const API_URL = 'https://7cgcgrivhhqbo3mnbcvv3tftwm0deicc.lambda-url.eu-north-1.on.aws/';
-
-// ✅ NEW: WEBSOCKET API (For Live GPS Tracking)
 const WS_URL = 'wss://6hir0irra5.execute-api.eu-north-1.amazonaws.com/production/';
 
-// GLOBAL STATE
+// global state
 let isLoggedIn = false;
 let currentUserRole = null; 
-let currentUserName = "User";   // Stores Name for Profile
-let currentUserCredits = 0;     // Stores Credits for Profile
-let activeRequestId = null;     // Remembers the job they are currently doing
-let currentVolunteerEmail = ""; // Remembers who is helping the passenger
-let selectedRating = 5;         // Default star rating
+let currentUserName = "User";
+let currentUserCredits = 0;
+let activeRequestId = null; // tracks current job
+let currentVolunteerEmail = "";
+let selectedRating = 5;
 let userCoords = null; 
-let currentUserRatingSum = 0;   // ✅ NEW: Total stars earned
-let currentUserRatingCount = 0; // ✅ NEW: Total number of reviews
+let currentUserRatingSum = 0;
+let currentUserRatingCount = 0;
 
-// Maps & Live Tracking State
+// maps and tracking state
 let map = null;
 let directionsService = null;
 let directionsRenderer = null;
-let ws = null;              // Holds the WebSocket connection
-let liveTrackingId = null;  // Holds the GPS watcher
-let globalActiveMap = null; // Tells the WebSocket which map to draw on
-let otherPersonMarker = null; // The dot representing the other user
+let ws = null;
+let liveTrackingId = null;
+let globalActiveMap = null;
+let otherPersonMarker = null;
 let activePassengerCoords = null;
 let activeDestination = "";
-let activeRouteIndex = 0; // Remembers which route alternative the passenger picked
-let liveTrackingMap = null; // Stores the passenger's tracking map instance
-let passengerMarker = null; // Saves the passenger's marker on the map
-let volunteerMarker = null; // Saves the volunteer's moving marker
-let distanceMatrixService = null; // Used to calculate the Uber ETA!
+let activeRouteIndex = 0;
+let liveTrackingMap = null;
+let passengerMarker = null;
+let volunteerMarker = null;
+let distanceMatrixService = null; // for eta
 
-// ==========================================
-// ✅ OVERRIDE DEFAULT ALERTS WITH BOOTSTRAP MODALS
-// ==========================================
+// override default alerts with bootstrap modals
 window.alert = function(message) {
     document.getElementById('customModalTitle').innerText = "LiveHelper";
     document.getElementById('customModalBody').innerText = message;
@@ -48,7 +43,7 @@ window.alert = function(message) {
     modal.show();
 };
 
-// Custom Async Confirm Modal (replaces window.confirm)
+// custom confirm modal
 function customConfirm(message, title = "Please Confirm") {
     return new Promise((resolve) => {
         document.getElementById('customModalTitle').innerText = title;
@@ -66,7 +61,7 @@ function customConfirm(message, title = "Please Confirm") {
         document.getElementById('btnConfirmOk').onclick = () => resolve(true);
         document.getElementById('btnConfirmCancel').onclick = () => resolve(false);
         
-        // If they click outside the box to close it, treat it as a "Cancel"
+        // treat clicking outside as cancel
         modalEl.addEventListener('hidden.bs.modal', function handler() {
             resolve(false);
             modalEl.removeEventListener('hidden.bs.modal', handler);
@@ -77,35 +72,30 @@ function customConfirm(message, title = "Please Confirm") {
 }
 
 
-
-
-// ==========================================
-// 1. WEBSOCKET & LIVE TRACKING
-// ==========================================
+// --- websockets & live tracking ---
 
 function connectLiveTracking() {
-    if (ws) return; // Don't connect twice
+    if (ws) return; // prevent double connections
     
     ws = new WebSocket(WS_URL);
-    
-    ws.onopen = () => console.log("🟢 Live GPS Connected");
+    ws.onopen = () => console.log("live tracking connected");
     
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         
-        // --- SCENARIO A: We receive a GPS update from the OTHER person ---
+        // incoming gps update from the other user
         if (data.type === 'live_gps' && data.role !== currentUserRole) {
             
-            // Push volunteer info to client (Hide "Connecting" screen)
+            // hide connecting screen if volunteer accepted
             if (currentUserRole === 'passenger' && data.role === 'volunteer') {
                 const overlay = document.getElementById('connecting-overlay');
                 if (overlay && overlay.style.display === 'block') {
                     overlay.style.display = 'none'; 
-                    alert("✅ A Volunteer has accepted your request and is on their way!");
+                    alert("A volunteer has accepted your request and is on their way!");
                 }
             }
             
-            // Live update of position on the map
+            // update map position
             if (globalActiveMap) {
                 const newPos = { lat: data.lat, lng: data.lng };
                 
@@ -114,24 +104,22 @@ function connectLiveTracking() {
                         position: newPos,
                         map: globalActiveMap,
                         title: data.role === 'volunteer' ? 'Volunteer' : 'Passenger',
-                        // Volunteer is green dot, passenger is blue dot
                         icon: data.role === 'volunteer' ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
                     });
                 } else {
-                    otherPersonMarker.setPosition(newPos); // Move the dot smoothly
+                    otherPersonMarker.setPosition(newPos);
                 }
             }
         
-
-       // --- SCENARIO C: Passenger receives an offer from a Volunteer ---
+        // passenger getting volunteer offers
         } else if (data.type === 'volunteer_offer' && currentUserRole === 'passenger') {
             const list = document.getElementById('volunteer-offers-list');
             if (list.innerHTML.includes('spinner-border')) list.innerHTML = '';
             
-            // 📦 UNPACK our hidden data from the email field
+            // parse the data we packed into the email field
             const extra = JSON.parse(data.email);
             
-            // Safely handle locations with apostrophes (like "King's Cross")
+            // escape apostrophes for places like King's Cross
             const safeDest = extra.dest.replace(/'/g, "\\'");
             const safeEmbark = extra.embark.replace(/'/g, "\\'");
             
@@ -146,20 +134,17 @@ function connectLiveTracking() {
                     </div>
                 </div>
             `;
-            // --- SCENARIO C: Passenger receives live GPS tracking updates from chosen volunteer ---
+            
+        // passenger tracking the chosen volunteer
         } else if (data.type === 'update_location') {
             
-            // SECURITY CHECK: Is this passenger waiting for a volunteer?
             if (currentUserRole === 'passenger' && currentVolunteerEmail && liveTrackingMap) {
-                
-                // 1. Unpack our Trojan Horse GPS data!
                 const volExtra = JSON.parse(data.email);
 
-                // Is this message from the specific volunteer we accepted?
+                // make sure it's the right volunteer
                 if (volExtra.vEmail === currentVolunteerEmail) {
                     const volPos = { lat: volExtra.vLat, lng: volExtra.vLng };
                     
-                    // 2. Move or Create the Green Volunteer Marker
                     if (volunteerMarker) {
                         volunteerMarker.setPosition(volPos);
                     } else {
@@ -168,13 +153,13 @@ function connectLiveTracking() {
                             map: liveTrackingMap,
                             title: 'Your Volunteer',
                             icon: {
-                                url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', // Green marker for Helper
-                                scaledSize: new google.maps.Size(40, 40) // Slightly bigger marker
+                                url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                                scaledSize: new google.maps.Size(40, 40)
                             }
                         });
                     }
 
-                    // 3. Automatically fit the map to see BOTH Passenger and Volunteer
+                    // fit map bounds
                     if (passengerMarker) {
                         const bounds = new google.maps.LatLngBounds();
                         bounds.extend(passengerMarker.getPosition());
@@ -182,110 +167,91 @@ function connectLiveTracking() {
                         liveTrackingMap.fitBounds(bounds);
                     }
 
-                // 4. Calculate the Uber ETA Countdown using Google Distance Matrix
+                    // calc eta
                     if (!distanceMatrixService) distanceMatrixService = new google.maps.DistanceMatrixService();
                     
-                    // ✅ BUG 2 FIX: Changed passengerCoords to userCoords
                     if (userCoords) {
                         distanceMatrixService.getDistanceMatrix({
-                            origins: [volPos], // Volunteer GPS
-                            destinations: [userCoords], // Passenger GPS
-                            travelMode: 'DRIVING', // Assume volunteer is driving for an accurate initial ETA
+                            origins: [volPos],
+                            destinations: [userCoords],
+                            travelMode: 'DRIVING',
                         }, (response, status) => {
                             if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
                                 const element = response.rows[0].elements[0];
-                                const durationText = element.duration.text;
-                                const distanceText = element.distance.text;
-                                
-                                // UPDATE HTML UI: Update the ETA countdown and distance!
-                                document.getElementById('tracking-eta-text').innerText = durationText; // Shows e.g. "5 min"
-                                document.getElementById('tracking-distance-text').innerText = distanceText + " away"; // Shows e.g. "2.1 km away"
+                                document.getElementById('tracking-eta-text').innerText = element.duration.text;
+                                document.getElementById('tracking-distance-text').innerText = element.distance.text + " away";
                             }
                         });
                     }
                 }
             }
 
-        // --- SCENARIO D: Volunteer is chosen by the Passenger ---
+        // volunteer gets accepted
         } else if (data.type === 'offer_accepted' && currentUserRole === 'volunteer') {
             try {
-                // 📦 UNPACK our hidden data
                 const extra = JSON.parse(data.email);
                 const myEmail = document.getElementById('email').value || "Unknown";
                 
                 if (extra.vEmail === myEmail) {
-                    alert("✅ The passenger chose you! Starting navigation.");
+                    alert("The passenger chose you! Starting navigation.");
                     acceptRequest(extra.reqId, data.lat || 0, data.lng || 0, extra.dest, extra.embark, true, extra.routeIndex);
                 } else {
-                    // ✅ FIX: The passenger chose someone else! Refresh the feed so the job vanishes.
+                    // lost the bid, refresh feed
                     loadVolunteerFeed();
                 }
             } catch(err) {
-                console.error("Handshake Error:", err);
+                console.error("handshake error:", err);
             }
             
-        // ✅ NEW: A job was created or cancelled! Instantly update the list.
+        // feed updates
         } else if (data.type === 'refresh_feeds' && currentUserRole === 'volunteer') {
-            // Only refresh if they are currently looking at the Volunteer feed
             if (document.getElementById('screen-volunteer').classList.contains('active-screen')) {
                 loadVolunteerFeed();
             }
-            
-        // ✅ BUG 1 FIX: ADDED THE MISSING PASSENGER LOGIC HERE!    
+               
+        // passenger accepts offer handling
         } else if (data.type === 'offer_accepted' && currentUserRole === 'passenger') {
             const extra = JSON.parse(data.email);
-            // 1. SAVE the volunteer's email globally for GPS scenario C!
             currentVolunteerEmail = extra.vEmail; 
-            
-            // 2. Swap screens and build the tracking map!
             switchToTrackingView();
         
-        // --- SCENARIO E: Journey Completed (Passenger shows rating screen) ---
+        // job done, show rating
         } else if (data.type === 'job_completed' && currentUserRole === 'passenger') {
             alert("You have reached your destination! Please rate your volunteer.");
             
-            // ✅ FIX: Hide both the selection map AND the live tracking map
             document.getElementById('map-container').style.display = 'none';
             document.getElementById('screen-passenger-tracking').style.display = 'none';
-            
-            // 2. Show the rating overlay
             document.getElementById('rating-overlay').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
             
-            // 3. Save the volunteer's email so the rating goes to the right person
             currentVolunteerEmail = data.volunteerEmail;
             
-            // 4. Stop broadcasting GPS to save battery
             if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
             
-        // ✅ NEW: Volunteer instantly receives their new rating from the passenger
+        // update volunteer stats live
         } else if (data.type === 'rating_updated' && currentUserRole === 'volunteer') {
             const myEmail = document.getElementById('email').value || "Unknown";
             
-            // If the rating was meant for me, update my local score instantly!
             if (data.email === myEmail) {
-                currentUserRatingSum += data.lat; // We hid the stars in the lat variable!
+                currentUserRatingSum += data.lat; // rating is stored in lat
                 currentUserRatingCount += 1;
                 
-                // If I am currently looking at my profile page, update the screen instantly!
                 if (document.getElementById('screen-profile').classList.contains('active-screen')) {
                     loadProfile(); 
                 }
             }
-        // ✅ NEW: Passenger cancelled while Volunteer was on the way!
+            
+        // handle mid-trip cancellations
         } else if (data.type === 'job_cancelled_mid_trip' && currentUserRole === 'volunteer') {
             const myEmail = document.getElementById('email').value || "Unknown";
             
-            // If the passenger cancelled ON ME, reset my screen!
             if (data.email === myEmail) {
-                alert("The passenger has cancelled the journey. Returning you to the feed.");
+                alert("The passenger cancelled the journey. Returning to feed.");
 
-                // Stop tracking GPS
                 if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
                 if (otherPersonMarker) otherPersonMarker.setMap(null);
                 otherPersonMarker = null;
 
-                // Hide the navigation map and show the feed again
                 document.getElementById('volunteer-nav').style.display = 'none';
                 document.getElementById('requests-feed').style.display = 'block';
                 loadVolunteerFeed();
@@ -294,72 +260,61 @@ function connectLiveTracking() {
     };
 }
     
-
-
-
-
-// Continuously watches the phone's GPS and blasts it to AWS
+// watch gps and send to server
 function startBroadcastingGPS() {
     if (navigator.geolocation) {
         liveTrackingId = navigator.geolocation.watchPosition((pos) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                      action: 'sync_location',
-                     type: 'live_gps', // 
+                     type: 'live_gps',
                      role: currentUserRole,
                      email: document.getElementById('email').value || "Guest",
                      lat: pos.coords.latitude,
                      lng: pos.coords.longitude
                 }));
             }
-        }, (err) => console.log("GPS Track Error:", err), { enableHighAccuracy: true });
+        }, (err) => console.log("gps err:", err), { enableHighAccuracy: true });
     }
 }
 
-// ✅ NEW: Hides irrelevant buttons based on who is logged in!
+// toggle button visibility based on role
 function updateUIVisibility() {
     const homePassenger = document.getElementById('home-card-passenger');
     const homeVolunteer = document.getElementById('home-card-volunteer');
     const navPassenger = document.getElementById('nav-tab-passenger');
     const navVolunteer = document.getElementById('nav-tab-volunteer');
 
-    // 1. Reset everything to visible by default
     if(homePassenger) { homePassenger.style.display = ''; homePassenger.className = "col-6"; }
     if(homeVolunteer) { homeVolunteer.style.display = ''; homeVolunteer.className = "col-6"; }
     if(navPassenger) navPassenger.style.display = '';
     if(navVolunteer) navVolunteer.style.display = '';
 
-    // 2. Hide the wrong buttons and make the remaining card full-width!
     if (isLoggedIn) {
         if (currentUserRole === 'passenger') {
             if(homeVolunteer) homeVolunteer.style.display = 'none';
             if(navVolunteer) navVolunteer.style.display = 'none';
-            if(homePassenger) homePassenger.className = "col-12"; // Expands to fill screen
+            if(homePassenger) homePassenger.className = "col-12";
         } else if (currentUserRole === 'volunteer') {
             if(homePassenger) homePassenger.style.display = 'none';
             if(navPassenger) navPassenger.style.display = 'none';
-            if(homeVolunteer) homeVolunteer.className = "col-12"; // Expands to fill screen
+            if(homeVolunteer) homeVolunteer.className = "col-12";
         }
     }
 }
 
 
-
-
-// ==========================================
-// 2. NAVIGATION & AUTHENTICATION
-// ==========================================
+// --- navigation & auth ---
 
 function showScreen(screenId) {
-    // 1. Hide all screens and show the target screen
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
     const target = document.getElementById(screenId);
     if(target) target.classList.add('active-screen');
 
-    // ✅ THE FIX: Automatically move the blue highlight on the bottom nav bar!
+    // sync bottom nav highlight
     const bottomNavs = document.querySelectorAll('.bottom-nav .nav-link');
     if (bottomNavs.length > 0) {
-        bottomNavs.forEach(nav => nav.classList.remove('active')); // Clear old highlights
+        bottomNavs.forEach(nav => nav.classList.remove('active'));
         
         if (screenId === 'screen-home') bottomNavs[0].classList.add('active');
         else if (screenId === 'screen-passenger') bottomNavs[1].classList.add('active');
@@ -370,11 +325,9 @@ function showScreen(screenId) {
 
 function handleActionClick(role) {
     if (!isLoggedIn) {
-        // If they aren't logged in, send them to login and select the right tab!
         goToLogin();
         switchLoginTab(role);
     } else {
-        // If they are logged in, send them straight to their dashboard!
         if (role === 'passenger') {
             showScreen('screen-passenger');
         } else {
@@ -391,7 +344,6 @@ function logout() {
     isLoggedIn = false;
     currentUserRole = null; 
     
-    // Stop live tracking when logging out
     if (ws) ws.close();
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
     ws = null;
@@ -403,10 +355,11 @@ function logout() {
         btn.setAttribute('onclick', 'goToLogin()');
     }
     showScreen('screen-home');
-    alert("You have logged out.");
+    alert("Logged out.");
     
-    updateUIVisibility(); // ✅ Instantly bring all buttons back!
+    updateUIVisibility();
 }
+
 function switchLoginTab(role) {
     const roleInput = document.getElementById('userRole');
     if(roleInput) roleInput.value = role;
@@ -448,10 +401,7 @@ if(authForm) {
         btn.innerHTML = 'Connecting...';
         btn.disabled = true;
 
-        // ==========================================
-        // ✅ REGEX FORM VALIDATION
-        // ==========================================
-       // ✅ FIX: Added .trim() to clean up invisible spaces from autofill!
+        // form validation
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const role = document.getElementById('userRole').value; 
@@ -460,43 +410,39 @@ if(authForm) {
         const phone = document.getElementById('phone').value.trim();
         
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const passwordRegex = /^.{6,}$/; // Minimum 6 characters
-        const nameRegex = /^[a-zA-Z\s]{2,50}$/; // Letters and spaces only
-        const phoneRegex = /^\+?[0-9]{10,15}$/; // 10 to 15 digits
+        const passwordRegex = /^.{6,}$/;
+        const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+        const phoneRegex = /^\+?[0-9]{10,15}$/;
 
-        
-        // 1. Validate Email & Password (For both Login and Signup)
         if (!emailRegex.test(email)) {
-            alert("Error: Please enter a valid email address.");
+            alert("Please enter a valid email.");
             btn.innerHTML = originalText;
             btn.disabled = false;
-            return; // Stops the function from proceeding to AWS
+            return;
         }
         if (!passwordRegex.test(password)) {
-            alert("Error: Password must be at least 6 characters long.");
+            alert("Password must be at least 6 characters.");
             btn.innerHTML = originalText;
             btn.disabled = false;
             return;
         }
 
-        // 2. Validate Name & Phone (ONLY for Signup)
         if (mode === 'signup') {
             if (!nameRegex.test(name)) {
-                alert("Error: Please enter a valid name (letters and spaces only, min 2 characters).");
+                alert("Please enter a valid name.");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
             }
             if (!phoneRegex.test(phone)) {
-                alert("Error: Please enter a valid phone number (10 to 15 digits).");
+                alert("Please enter a valid phone number.");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
             }
         }
-        // ==========================================
 
-     try {
+        try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -510,28 +456,25 @@ if(authForm) {
             const data = await response.json();
 
             if (data.success) {
-                // SECURITY CHECK: Prevent users from logging into the wrong tab
+                // prevent role mismatch on login
                 if (mode === 'login' && data.role && data.role !== role) {
-                    alert("Access Denied: This email is registered as a " + data.role + ". Please switch tabs to log in.");
+                    alert("Account registered as " + data.role + ". Switch tabs to log in.");
                     btn.innerHTML = originalText;
                     btn.disabled = false;
-                    return; // Stop the login completely!
+                    return;
                 }
 
                 isLoggedIn = true;
-                currentUserRole = data.role || role; // Trust the database role, not the tab
+                currentUserRole = data.role || role;
                 
                 const safeName = name.trim() !== '' ? name : "New User";
                 currentUserName = mode === 'signup' ? safeName : (data.name || "New User");
                 currentUserCredits = data.credits || 0;
-                
                 currentUserRatingSum = data.ratingSum || 0; 
                 currentUserRatingCount = data.ratingCount || 0; 
                 
                 updateUIVisibility(); 
-              
                 connectLiveTracking();
-                alert(mode === 'signup' ? "Account Created! Logged in." : "Welcome back!");
                 
                 const loginBtn = document.getElementById('authBtn');
                 if(loginBtn) {
@@ -555,16 +498,14 @@ if(authForm) {
         }
     });
 }
-// ==========================================
-// 3. PASSENGER LOGIC
-// ==========================================
+
+// --- passenger logic ---
 
 function getGPS() {
     const display = document.getElementById('locationDisplay');
     display.value = "Locating...";
     
     if (navigator.geolocation) {
-        // ✅ FIX: Added enableHighAccuracy to force real GPS instead of Wi-Fi guessing
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const lat = pos.coords.latitude;
@@ -581,16 +522,17 @@ function getGPS() {
                 });
             },
             (error) => { 
-                console.log("GPS Error:", error);
+                console.log("gps error:", error);
                 display.value = ""; 
-                alert("Could not find your location automatically. Please type it in.");
+                alert("Could not locate automatically. Please type it in.");
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
-        alert("Location not supported by this browser.");
+        alert("Location not supported.");
     }
 }
+
 const reqForm = document.getElementById('requestForm');
 if(reqForm) {
     reqForm.addEventListener('submit', async (e) => {
@@ -600,7 +542,7 @@ if(reqForm) {
         const dest = document.getElementById('destination').value;
 
         if (!embarkVal) {
-            alert("Please enter a starting location or tap the GPS target button.");
+            alert("Please enter a starting location.");
             return;
         }
 
@@ -610,7 +552,7 @@ if(reqForm) {
             initGoogleMap(userCoords.lat, userCoords.lng, dest);
         };
 
-        // ✅ FIX: If they typed an address manually, convert it to coordinates first!
+        // handle manually typed addresses
         if (!userCoords) {
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: embarkVal + ", London, UK", bounds: new google.maps.LatLngBounds(
@@ -621,7 +563,7 @@ if(reqForm) {
                     document.getElementById('locationDisplay').value = results[0].formatted_address;
                     processRequest();
                 } else {
-                    alert("Could not find that starting location. Please select it from the dropdown or use the GPS button.");
+                    alert("Could not find location. Try the dropdown or GPS.");
                 }
             });
         } else {
@@ -629,6 +571,7 @@ if(reqForm) {
         }
     });
 }
+
 async function confirmSelection() {
     const overlay = document.getElementById('connecting-overlay');
     const offersList = document.getElementById('volunteer-offers-list');
@@ -651,10 +594,8 @@ async function confirmSelection() {
     const finalLng = userCoords ? userCoords.lng : -0.1278;
 
     try {
-        console.log("Sending Request to AWS...");
         const response = await fetch(API_URL, {
             method: 'POST',
-            // ✅ THE FIX: This tells AWS that we are sending JSON data!
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({
                 action: 'request_help', 
@@ -670,7 +611,6 @@ async function confirmSelection() {
         });
         
         const data = await response.json(); 
-        console.log("AWS Response:", data);
 
         if (data.success) {
             activeRequestId = document.getElementById('email').value; 
@@ -679,61 +619,55 @@ async function confirmSelection() {
             }
             startBroadcastingGPS();
         } else {
-            alert("AWS Error: " + data.error);
+            alert("Server Error: " + data.error);
             if (overlay) overlay.style.display = 'none';
         }
     } catch(err) {
-        console.error("AWS Save Error:", err);
-        alert("Connection blocked. Check F12 Console for details.");
+        console.error("save error:", err);
         if (overlay) overlay.style.display = 'none';
     }
 }
 
-// ✅ FIX: Added 'async' so we can talk to AWS
 async function cancelRequest() {
     document.getElementById('connecting-overlay').style.display = 'none';
     document.getElementById('map-container').style.display = 'none';
     document.getElementById('screen-passenger-tracking').style.display = 'none'; 
     document.getElementById('requestForm').style.display = 'block';
     
-    // Stop sharing GPS locally
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
     
     if (activeRequestId) {
         try {
-            // 1. MUST use 'await' so the database finishes cancelling BEFORE moving on!
             await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // ✅ FIX 1: Added CORS Header!
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     action: 'cancel_request', 
-                    email: activeRequestId // ✅ FIX 2: Matched exactly to what AWS expects
+                    email: activeRequestId
                 })
             });
             
-            activeRequestId = null; // Clear it from memory
+            activeRequestId = null;
             
-            // 2. NOW it is safe to tell the volunteers to refresh their screens!
             if (ws && ws.readyState === WebSocket.OPEN) {
-                // Tell all volunteers to clear the job from their feed
                 ws.send(JSON.stringify({ action: 'sync_location', type: 'refresh_feeds', role: 'passenger', email: 'system', lat: 0, lng: 0 }));
                 
-                // ✅ Tell the SPECIFIC volunteer who is on the way to stop!
                 if (currentVolunteerEmail) {
                     ws.send(JSON.stringify({ action: 'sync_location', type: 'job_cancelled_mid_trip', role: 'passenger', email: currentVolunteerEmail, lat: 0, lng: 0 }));
                 }
             }
         } catch (err) { 
-            console.error("Cancel Error:", err); 
+            console.error("cancel error:", err); 
         }
     }
     
-    currentVolunteerEmail = ""; // Clear the volunteer from memory
+    currentVolunteerEmail = ""; 
     alert("Request cancelled.");
 }
-// ==========================================
-// 4. VOLUNTEER LOGIC
-// ==========================================
+
+
+// --- volunteer logic ---
+
 async function loadVolunteerFeed() {
     const feed = document.getElementById('requests-feed');
     if(!feed) return;
@@ -749,8 +683,7 @@ async function loadVolunteerFeed() {
 
         let validRequests = [];
         if (data.success && data.requests) {
-            // ✅ THE ULTIMATE GHOST-BUSTER FILTER
-            // This guarantees the app ignores any broken data sitting in your database!
+            // filter out bad entries
             validRequests = data.requests.filter(req => {
                 const embark = req.embarkation || req.startLocation || "";
                 const dest = req.destination || "";
@@ -785,7 +718,7 @@ async function loadVolunteerFeed() {
                         <div class="d-grid">
                             <button class="btn btn-success fw-bold" 
                                 onclick="sendOffer('${req.passengerEmail}', ${req.lat || 0}, ${req.lng || 0}, '${safeDest}', '${safeEmbark}')">
-                               Offer to Help <i class="fa-solid fa-hand-sparkles ms-2"></i>
+                               Offer to Help
                             </button>
                         </div>
                     </div>
@@ -796,15 +729,16 @@ async function loadVolunteerFeed() {
             feed.innerHTML = `<p class="text-center text-muted">No active requests found.</p>`;
         }
     } catch (err) {
-        feed.innerHTML = `<p class="text-center text-danger">Could not connect to Cloud.</p>`;
+        feed.innerHTML = `<p class="text-center text-danger">Could not connect to server.</p>`;
     }
 }
+
 async function acceptRequest(requestId, passengerLat, passengerLng, destName, embarkName, skipConfirm = false, passengerRouteIndex = 0) {
     activeRequestId = requestId; 
-    activeRouteIndex = passengerRouteIndex; // Save it to memory!
+    activeRouteIndex = passengerRouteIndex;
 
     if (!skipConfirm) {
-        const agreementMessage = `Do you agree to help the passenger with embarkation at ${embarkName} and disembarkation at ${destName}?`;
+        const agreementMessage = `Do you agree to help the passenger from ${embarkName} to ${destName}?`;
         const isConfirmed = await customConfirm(agreementMessage); 
         if (!isConfirmed) return; 
     }
@@ -822,23 +756,21 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
         const data = await res.json();
 
         if (!data.success) {
-            alert("Sorry! This request was just taken by another volunteer or cancelled by the passenger.");
+            alert("This request was taken by someone else or cancelled.");
             loadVolunteerFeed(); 
             return;
         }
 
-        // Volunteer starts broadcasting their GPS location live!
         startLiveGpsBroadcasting();
 
     } catch (error) { 
-        alert("Could not connect to server.");
+        alert("Server error.");
         return;
     }
 
     document.getElementById('requests-feed').style.display = 'none';
     document.getElementById('volunteer-nav').style.display = 'block';
     
-    // Reset buttons for a new job
     document.getElementById('btn-nearby').style.display = 'block';
     document.getElementById('btn-complete').style.display = 'none';
     document.getElementById('vol-nav-title').innerHTML = '<i class="fa-solid fa-person-walking-arrow-right"></i> Heading to Passenger';
@@ -846,7 +778,6 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
     const statusText = document.getElementById('nav-dest');
     if(statusText) statusText.innerText = "Meeting at: " + embarkName;
 
-    // Save globally for the "I'm Nearby" button
     activePassengerCoords = { lat: passengerLat, lng: passengerLng };
     activeDestination = destName;
 
@@ -865,13 +796,11 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
             globalActiveMap = volMap;
 
             const dirService = new google.maps.DirectionsService();
-            // Store globally so imNearby can use it
             window.volDirRenderer = new google.maps.DirectionsRenderer({ 
                 map: volMap,
-                panel: document.getElementById('vol-directions-panel') // Shows text instructions
+                panel: document.getElementById('vol-directions-panel')
             });
 
-            // Try Transit first, fallback to Walking
             dirService.route({
                 origin: { lat: volLat, lng: volLng },
                 destination: { lat: passengerLat, lng: passengerLng },
@@ -893,12 +822,12 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
             
         }, () => alert("GPS Error."));
     } else {
-        alert("Geolocation is not supported.");
+        alert("Geolocation not supported.");
     }
 }
-// ==========================================
-// 5. GOOGLE MAPS INIT
-// ==========================================
+
+
+// --- google maps ---
 
 function initGoogleMap(userLat, userLng, destinationText) {
     const mapContainer = document.getElementById('google-map');
@@ -919,7 +848,6 @@ function initGoogleMap(userLat, userLng, destinationText) {
         directionsRenderer.setPanel(panelContainer); 
     }
     
-    // Set global map so WebSocket knows where to draw the volunteer
     globalActiveMap = map;
 
     directionsService.route({
@@ -933,7 +861,7 @@ function initGoogleMap(userLat, userLng, destinationText) {
             directionsRenderer.setDirections(result);
         } else {
             if (status === 'ZERO_RESULTS') {
-                alert('No transport route found. Switching to walking.');
+                alert('No transit route found, falling back to walking.');
                 directionsService.route({
                     origin: { lat: userLat, lng: userLng },
                     destination: destinationText, 
@@ -942,19 +870,20 @@ function initGoogleMap(userLat, userLng, destinationText) {
                     if (stat === 'OK') directionsRenderer.setDirections(res);
                 });
             } else {
-                alert('Route Failed: ' + status);
+                alert('Route error: ' + status);
             }
         }
     });
 }
+
 window.onload = function() {
     const destInput = document.getElementById('destination');
-    const startInput = document.getElementById('locationDisplay'); // ✅ NEW
+    const startInput = document.getElementById('locationDisplay');
     
     if (google) {
         const londonBounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(51.286760, -0.510375), // South-West Corner
-            new google.maps.LatLng(51.691874, 0.334015)   // North-East Corner
+            new google.maps.LatLng(51.286760, -0.510375),
+            new google.maps.LatLng(51.691874, 0.334015)
         );
 
         const autocompleteOptions = {
@@ -966,7 +895,6 @@ window.onload = function() {
 
         if (destInput) new google.maps.places.Autocomplete(destInput, autocompleteOptions);
 
-        // ✅ FIX: Add Autocomplete to the start location so they can search for stations!
         if (startInput) {
             const startAutocomplete = new google.maps.places.Autocomplete(startInput, autocompleteOptions);
             startAutocomplete.addListener('place_changed', () => {
@@ -978,12 +906,11 @@ window.onload = function() {
         }
     }
 };
-// Awards points to the Volunteer!
+
 async function completeJob() {
     try {
         const email = document.getElementById('email').value || "Guest";
         
-        // 1. Blast WebSocket signal to passenger so they see the rating screen
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 action: 'sync_location', 
@@ -993,55 +920,47 @@ async function completeJob() {
             }));
         }
 
-        // 2. Tell AWS Database to permanently save the completed job and credits!
         await fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }, // ✅ FIX 1: Added missing header
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 action: 'complete_job',
-                passengerEmail: activeRequestId, // ✅ FIX 2: Matched exactly what Lambda expects
+                passengerEmail: activeRequestId,
                 volunteerEmail: email
              }) 
         });
         
-        // ✅ FIX 3: Your AWS Database awards 10 credits per job, so we match it locally!
         currentUserCredits += 10;
-        alert("✅ Job Complete! You earned +10 Volunteer Credits. Thank you for your help!");
+        alert("Job done! +10 credits.");
         
     } catch(err) {
-        console.error("Credit Error:", err);
-        alert("Job complete, but there was an error updating your credits.");
+        console.error("credit error:", err);
     }
 
-    // Stop sharing GPS and clear maps
     if (liveTrackingId) navigator.geolocation.clearWatch(liveTrackingId);
     if (otherPersonMarker) otherPersonMarker.setMap(null);
     otherPersonMarker = null;
 
-    // Go back to the feed
     document.getElementById('volunteer-nav').style.display = 'none';
     document.getElementById('requests-feed').style.display = 'block';
     loadVolunteerFeed();
 }
-// ==========================================
-// 6. PROFILE & CREDITS
-// ==========================================
+
+// --- profile & settings ---
+
 function loadProfile() {
     if (!isLoggedIn) {
-        alert("Please log in to view your profile.");
+        alert("Please log in.");
         goToLogin();
         return;
     }
 
-    // Update the visual text on the screen
     document.getElementById('profile-name').innerText = currentUserName;
     document.getElementById('profile-role').innerText = currentUserRole.toUpperCase();
     
-    // Dynamically update the avatar
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=eff6ff&color=2563eb&size=100&rounded=true`;
     document.getElementById('profile-avatar').src = avatarUrl;
     
-    // Only show credits & rating if they are a volunteer
     if (currentUserRole === 'volunteer') {
         document.getElementById('volunteer-stats').style.display = 'block';
         document.getElementById('profile-credits').innerText = currentUserCredits;
@@ -1055,28 +974,24 @@ function loadProfile() {
         document.getElementById('volunteer-stats').style.display = 'none';
     }
 
-    // ✅ FIX: Switch to the Profile Screen (showScreen now handles the highlighting automatically!)
     showScreen('screen-profile');
 
     document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
-    // Make the profile button active (it's the 4th button in the nav)
     document.querySelectorAll('.bottom-nav .nav-link')[3].classList.add('active');
 }
 
-// Opens the settings screen and pre-fills the form
 function openSettings() {
     document.getElementById('settingsEmail').value = document.getElementById('email').value || "";
     document.getElementById('settingsName').value = currentUserName || "";
-    document.getElementById('settingsPassword').value = ""; // Always blank for security
+    document.getElementById('settingsPassword').value = ""; 
     
     showScreen('screen-settings');
 }
 
-// Saves the changes to AWS
 async function saveSettings(e) {
     e.preventDefault();
     const btn = document.getElementById('settingsSaveBtn');
-    btn.innerHTML = 'Saving... <div class="spinner-border spinner-border-sm ms-2"></div>';
+    btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
     const newName = document.getElementById('settingsName').value.trim();
@@ -1091,35 +1006,32 @@ async function saveSettings(e) {
                 email: document.getElementById('settingsEmail').value,
                 name: newName,
                 phone: newPhone,
-                password: newPassword // Can be empty
+                password: newPassword
             })
         });
         const data = await response.json();
         
         if (data.success) {
-            currentUserName = newName; // Update local memory
-            alert("Profile updated successfully!");
-            loadProfile(); // Send them back to the profile screen
+            currentUserName = newName;
+            alert("Profile updated.");
+            loadProfile();
         } else {
             alert("Error: " + data.error);
         }
     } catch (err) {
-        alert("Could not connect to server.");
+        alert("Connection error.");
     } finally {
         btn.innerHTML = 'Save Changes';
         btn.disabled = false;
     }
 }
 
-// ==========================================
-// 7. RATING SYSTEM
-// ==========================================
+// --- rating & job flow ---
 
 function setRating(stars) {
     selectedRating = stars;
     const starElements = document.querySelectorAll('#star-container i');
     
-    // Turn clicked stars gold, and unclicked stars grey
     starElements.forEach((star, index) => {
         if (index < stars) {
             star.classList.remove('text-muted');
@@ -1131,17 +1043,15 @@ function setRating(stars) {
     });
 }
 
-
-  async function submitRating() {
+async function submitRating() {
     try {
-        // 🚀 NEW: Instantly tell the volunteer their new rating via WebSockets!
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 action: 'sync_location',
                 type: 'rating_updated',
                 role: 'passenger',
-                email: currentVolunteerEmail, // Send it directly to the volunteer who helped
-                lat: selectedRating, // Sneak the 1-5 star rating in the latitude variable!
+                email: currentVolunteerEmail,
+                lat: selectedRating, // pass rating in lat to save payload size
                 lng: 0
             }));
         }
@@ -1154,24 +1064,21 @@ function setRating(stars) {
                 rating: selectedRating
             })
         });
-        alert("Thanks for your feedback!");
     } catch(err) {
-        console.error("Rating error:", err);
+        console.error("rating error:", err);
     }
     
-    // ✅ FIX: Wipe the tracking screen clean and reset everything!
     document.getElementById('rating-overlay').style.display = 'none';
     document.getElementById('screen-passenger-tracking').style.display = 'none'; 
     document.getElementById('requestForm').style.display = 'block'; 
     
-    // Go home
     showScreen('screen-home');
 }
+
 function acceptOffer(volEmail, reqId, lat, lng, dest, embark) {
     document.getElementById('connecting-overlay').style.display = 'none';
-    alert("You selected a volunteer! They are now routing to your location.");
     
-   // 🕵️ TROJAN HORSE: Hide our custom data inside a JSON string
+    // pack data into email field since aws only forwards specific fields
     const packedData = JSON.stringify({
         vEmail: volEmail,
         reqId: reqId,
@@ -1191,21 +1098,18 @@ function acceptOffer(volEmail, reqId, lat, lng, dest, embark) {
         }));
     }
 
-    // ✅ THE FIX: Don't wait for AWS! Instantly switch to the tracking map locally.
     currentVolunteerEmail = volEmail;
     switchToTrackingView();
 }
 
 function sendOffer(requestId, passengerLat, passengerLng, destName, embarkName) {
-    alert("Offer sent! Waiting for the passenger to choose you...");
+    alert("Offer sent.");
     
-    // ✅ FIX: Set default rating to New
     let rating = "New";
     if (currentUserRatingCount > 0) {
         rating = (currentUserRatingSum / currentUserRatingCount).toFixed(1);
     }
 
-    //  TROJAN HORSE: Hide our custom data inside a JSON string
     const packedData = JSON.stringify({
         vEmail: document.getElementById('email').value || "Unknown",
         vName: currentUserName,
@@ -1220,7 +1124,7 @@ function sendOffer(requestId, passengerLat, passengerLng, destName, embarkName) 
             action: 'sync_location', 
             type: 'volunteer_offer',
             role: 'volunteer',
-            email: packedData, // Sneaking it past the AWS bouncer
+            email: packedData,
             lat: passengerLat, 
             lng: passengerLng
         }));
@@ -1228,30 +1132,25 @@ function sendOffer(requestId, passengerLat, passengerLng, destName, embarkName) 
 }
 
 function imNearby() {
-    // 1. Swap the buttons
     document.getElementById('btn-nearby').style.display = 'none';
     document.getElementById('btn-complete').style.display = 'block';
     
-    // 2. Update the Text
     document.getElementById('vol-nav-title').innerHTML = '<i class="fa-solid fa-route"></i> Navigating to Destination';
     document.getElementById('nav-dest').innerText = "Heading to: " + activeDestination;
 
-   // 3. Clear the old route and draw the new one!
     const dirService = new google.maps.DirectionsService();
     
     dirService.route({
         origin: activePassengerCoords, 
         destination: activeDestination, 
         travelMode: 'TRANSIT',
-        provideRouteAlternatives: true, // ✅ MUST BE TRUE to generate the same alternatives!
+        provideRouteAlternatives: true,
         transitOptions: { modes: ['SUBWAY', 'TRAIN', 'BUS'], routingPreference: 'FEWER_TRANSFERS' }
     }, (result, status) => {
         if (status === 'OK') {
             window.volDirRenderer.setDirections(result);
-            // 🎯 THIS IS THE MAGIC LINE: Force it to show the exact route the passenger chose
-            window.volDirRenderer.setRouteIndex(activeRouteIndex || 0);
+            window.volDirRenderer.setRouteIndex(activeRouteIndex || 0); // match passenger route
         } else {
-            // Fallback to walking if no buses exist
             dirService.route({
                 origin: activePassengerCoords,
                 destination: activeDestination,
@@ -1261,14 +1160,11 @@ function imNearby() {
             });
         }
     });
-    
-    alert("You have met the passenger! The map has updated to show your final destination.");
 }
 
 function startLiveGpsBroadcasting() {
     if (navigator.geolocation) {
         liveTrackingId = navigator.geolocation.watchPosition((position) => {
-            // ✅ THE FIX: Ensure AWS connection is fully open before sending GPS data
             if (!ws || ws.readyState !== WebSocket.OPEN) return; 
 
             const lat = position.coords.latitude;
@@ -1286,21 +1182,17 @@ function startLiveGpsBroadcasting() {
                 role: 'volunteer',
                 email: packedData 
             }));
-        }, () => console.error("High Accuracy Geolocation access denied."), { enableHighAccuracy: true });
+        }, () => console.error("geo access denied"), { enableHighAccuracy: true });
     }
 }
 
 function switchToTrackingView() {
-    // 1. Swap visibility to the dedicated tracking screen
-    document.getElementById('map-container').style.display = 'none'; // Clear selection map
-    document.getElementById('connecting-overlay').style.display = 'none'; // Clear overlay
-    document.getElementById('screen-passenger-tracking').style.display = 'block'; // Show live tracking map
+    document.getElementById('map-container').style.display = 'none';
+    document.getElementById('connecting-overlay').style.display = 'none';
+    document.getElementById('screen-passenger-tracking').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 2. Initialize the fresh tracking map centered on the Passenger
     const mapDiv = document.getElementById('live-tracking-map');
-    
-    // ✅ BUG 2 FIX: Changed passengerCoords to userCoords
     const mapPos = userCoords || { lat: 51.5, lng: -0.1 }; 
     
     liveTrackingMap = new google.maps.Map(mapDiv, {
@@ -1309,7 +1201,6 @@ function switchToTrackingView() {
         disableDefaultUI: true 
     });
 
-    // 3. Draw the Passenger's Marker
     if(userCoords) {
         passengerMarker = new google.maps.Marker({
             position: userCoords,

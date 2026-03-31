@@ -7,7 +7,7 @@
 
 body {
     font-family: 'Nunito', sans-serif;
-    background: #f4f7f6; /* ✅ Clean, flat off-white */
+    background: #f4f7f6; /* light background */
     color: #1e293b;
     margin: 0;
     padding: 0;
@@ -17,7 +17,7 @@ body {
     overflow: hidden; 
 }
 
-/* Modern App Header */
+/* top header layout */
 .top-header {
     background: #ffffff; 
     position: fixed; 
@@ -28,12 +28,12 @@ body {
 }
 
 .top-header .navbar-brand {
-    color: #2563eb !important; /* Flat Corporate Blue */
+    color: #2563eb !important;
     text-shadow: none;
 }
 
 .top-header .btn-primary {
-    background: #2563eb; /* Flat Blue */
+    background: #2563eb;
     border: none;
     color: white;
     font-weight: bold;
@@ -46,15 +46,15 @@ main {
     padding-bottom: 120px; 
 }
 
-/* ✅ FLAT, CLEAN HERO BANNER */
+/* flat hero banner */
 .hero-section {
     background: #2563eb;
     color: white; 
-    border-radius: 0; /* Flat, no curves */
-    padding: 85px 20px 25px 20px; /* Pushes content safely below the header */
+    border-radius: 0;
+    padding: 85px 20px 25px 20px;
     text-align: left; 
     box-shadow: none;
-    margin-bottom: 20px; /* Natural spacing, no more overlap hacks */
+    margin-bottom: 20px;
 }
 
 .screen { display: none; }
@@ -68,7 +68,7 @@ main {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* FLOATING BOTTOM NAV */
+/* bottom sticky nav */
 .bottom-nav {
     position: fixed;
     bottom: 25px;
@@ -76,7 +76,7 @@ main {
     transform: translateX(-50%);
     width: 92%;
     max-width: 450px; 
-    background: #1e293b; /* Clean Dark Slate */
+    background: #1e293b;
     border-radius: 40px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     z-index: 1000; 
@@ -99,7 +99,7 @@ main {
 
 .bottom-nav .nav-link.active {
     color: white; 
-    background: #2563eb; /* Solid Flat Blue */
+    background: #2563eb;
     box-shadow: none;
 }
 
@@ -113,9 +113,9 @@ main {
     transform: translateY(-2px); 
 }
 
-/* Beautiful Solid Cards */
+/* generic cards */
 .card {
-    border-radius: 16px !important; /* Less bubbly */
+    border-radius: 16px !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
     border: 1px solid #e2e8f0 !important;
     background: #ffffff;
@@ -126,7 +126,7 @@ main {
     transform: scale(0.97);
 }
 
-/* ✅ FLAT Action Cards for the Home Screen */
+/* action cards on home screen */
 .card-help {
     background: #eff6ff !important;
     border: 2px solid #bfdbfe !important;
@@ -147,9 +147,9 @@ main {
 }
 .card-vol h5 { color: #166534 !important; }
 
-/* Clean Flat Buttons */
+/* base buttons */
 .btn {
-    border-radius: 12px; /* Professional curve */
+    border-radius: 12px;
     font-weight: 700;
     padding: 0.85rem 1.5rem;
     transition: all 0.2s ease;
@@ -168,7 +168,7 @@ main {
     background: #1d4ed8;
 }
 
-/* Input Fields */
+/* forms */
 .form-control, .form-select, .input-group-text {
     border-radius: 12px;
     border: 2px solid #e2e8f0;
@@ -185,7 +185,7 @@ main {
     background-color: #ffffff;
 }
 
-/* Uber-style Popup */
+/* connection overlay popup */
 .connecting-card {
     display: none; 
     position: fixed;
