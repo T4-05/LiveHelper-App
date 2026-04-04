@@ -57,7 +57,11 @@ main {
     margin-bottom: 20px;
 }
 
-.screen { display: none; }
+.screen {
+     display: none; 
+}
+
+
 .active-screen { 
     display: block; 
     animation: fadeScale 0.2s ease-out; 
