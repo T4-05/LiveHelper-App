@@ -72,7 +72,7 @@ function customConfirm(message, title = "Please Confirm") {
 }
 
 
-// --- websockets & live tracking ---
+//  websockets & live tracking 
 
 function connectLiveTracking() {
     if (ws) return; // prevent double connections
@@ -304,7 +304,7 @@ function updateUIVisibility() {
 }
 
 
-// --- navigation & auth ---
+//  navigation & auth 
 
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
@@ -499,7 +499,7 @@ if(authForm) {
     });
 }
 
-// --- passenger logic ---
+// passenger logic 
 
 function getGPS() {
     const display = document.getElementById('locationDisplay');
@@ -666,7 +666,7 @@ async function cancelRequest() {
 }
 
 
-// --- volunteer logic ---
+//  volunteer logic 
 
 async function loadVolunteerFeed() {
     const feed = document.getElementById('requests-feed');
@@ -827,7 +827,7 @@ async function acceptRequest(requestId, passengerLat, passengerLng, destName, em
 }
 
 
-// --- google maps ---
+//  google maps 
 
 function initGoogleMap(userLat, userLng, destinationText) {
     const mapContainer = document.getElementById('google-map');
@@ -946,7 +946,7 @@ async function completeJob() {
     loadVolunteerFeed();
 }
 
-// --- profile & settings ---
+//  profile & settings 
 
 function loadProfile() {
     if (!isLoggedIn) {
@@ -1026,7 +1026,7 @@ async function saveSettings(e) {
     }
 }
 
-// --- rating & job flow ---
+//  rating & job flow 
 
 function setRating(stars) {
     selectedRating = stars;
